@@ -8,15 +8,19 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(215, 239, 57, 0.09), transparent 24%),
     radial-gradient(circle at 82% 18%, rgba(76, 255, 53, 0.08), transparent 18%),
     linear-gradient(180deg, #060806 0%, #0b1209 50%, #070907 100%);
   color: #f8f1e7;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
@@ -50,10 +54,31 @@ main::before {
   }
 
   .button-primary {
-    @apply inline-flex items-center justify-center rounded-full bg-champagne px-6 py-3 text-sm font-semibold text-canvas shadow-[0_12px_36px_rgba(161,220,39,0.22)] transition duration-300 hover:bg-[#e4f85b];
+    @apply inline-flex min-h-12 items-center justify-center rounded-full bg-champagne px-6 py-3 text-sm font-semibold text-canvas shadow-[0_12px_36px_rgba(161,220,39,0.22)] transition duration-300 hover:bg-[#e4f85b];
   }
 
   .button-secondary {
-    @apply inline-flex items-center justify-center rounded-full border border-borderSoft bg-[rgba(33,61,19,0.16)] px-6 py-3 text-sm font-semibold text-mist/80 transition duration-300 hover:border-champagne/45 hover:bg-[rgba(79,135,30,0.18)] hover:text-champagne;
+    @apply inline-flex min-h-12 items-center justify-center rounded-full border border-borderSoft bg-[rgba(33,61,19,0.16)] px-6 py-3 text-sm font-semibold text-mist/80 transition duration-300 hover:border-champagne/45 hover:bg-[rgba(79,135,30,0.18)] hover:text-champagne;
+  }
+}
+
+@media (max-width: 767px) {
+  main::before {
+    background-size: 44px 44px;
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
