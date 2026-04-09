@@ -1,20 +1,17 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { heroHighlights, restaurantInfo } from '@/lib/site-data';
 
 export function HeroSection() {
-  const prefersReducedMotion = useReducedMotion();
-
   return (
     <section className="relative -mx-5 -mt-8 overflow-hidden sm:-mx-8 sm:-mt-10 lg:-mx-12 2xl:-mx-16">
       <div className="absolute inset-0">
         <motion.div
-          initial={prefersReducedMotion ? { opacity: 0.94 } : { scale: 1.08, y: 12 }}
-          animate={prefersReducedMotion ? { opacity: 1 } : { scale: [1.08, 1.04, 1.07], y: [12, 0, 10] }}
-          transition={prefersReducedMotion ? { duration: 0.4 } : {
+          initial={{ scale: 1.12, y: 18 }}
+          animate={{ scale: [1.12, 1.06, 1.1], y: [18, 0, 12] }}
+          transition={{
             duration: 16,
             ease: 'easeInOut',
             times: [0, 0.55, 1],
@@ -35,27 +32,26 @@ export function HeroSection() {
         </motion.div>
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,3,4,0.8),rgba(3,3,4,0.42)_24%,rgba(3,3,4,0.58)_62%,rgba(4,4,5,0.94))]" />
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
+          initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.1, ease: 'easeOut', delay: 0.15 }}
-          className="absolute -left-24 top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(215,239,57,0.18),rgba(215,239,57,0))] blur-3xl sm:top-20 sm:h-72 sm:w-72"
+          transition={{ duration: 1.4, ease: 'easeOut', delay: 0.2 }}
+          className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(215,239,57,0.22),rgba(215,239,57,0))] blur-3xl"
         />
         <motion.div
-          initial={{ opacity: 0, x: 24 }}
+          initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.25 }}
-          className="absolute bottom-10 right-0 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(31,95,31,0.22),rgba(31,95,31,0))] blur-3xl sm:h-80 sm:w-80"
+          transition={{ duration: 1.6, ease: 'easeOut', delay: 0.35 }}
+          className="absolute bottom-10 right-0 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(31,95,31,0.28),rgba(31,95,31,0))] blur-3xl"
         />
       </div>
 
-      <div className="relative z-10 flex min-h-[100svh] items-center justify-center px-5 pb-10 pt-24 text-center sm:px-8 sm:pb-14 sm:pt-32 lg:items-end lg:justify-start lg:px-12 lg:pb-16 lg:pt-36 lg:text-left 2xl:px-16">
+      <div className="relative z-10 flex min-h-[100svh] items-center justify-center px-5 pb-12 pt-28 text-center sm:px-8 sm:pb-14 sm:pt-32 lg:items-end lg:justify-start lg:px-12 lg:pb-16 lg:pt-36 lg:text-left 2xl:px-16">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.95, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto flex min-h-[calc(100svh-9rem)] w-full max-w-3xl flex-col items-center justify-end lg:mx-0 lg:min-h-0 lg:items-start lg:justify-end"
+          className="mx-auto flex min-h-[calc(100svh-10rem)] w-full max-w-3xl flex-col items-center justify-end lg:mx-0 lg:min-h-0 lg:items-start lg:justify-end"
         >
-          <div className="w-full rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(10,11,12,0.28),rgba(10,11,12,0.58))] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.26)] backdrop-blur-xl sm:p-7 lg:max-w-[46rem] lg:rounded-[2.4rem]">
           <motion.p
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -64,66 +60,27 @@ export function HeroSection() {
           >
             Richard&apos;s Garden Restaurant
           </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mt-4 font-heading text-[2.4rem] leading-[0.96] text-white sm:text-6xl lg:max-w-[14ch] lg:text-[4.6rem]"
-          >
-            Serviço caloroso, pratos marcantes e um ritmo mais leve em Lisboa.
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.78, delay: 0.28 }}
-            className="mt-4 text-sm leading-7 text-white/74 sm:text-base sm:leading-8 lg:max-w-2xl"
-          >
-            Cozinha europeia e portuguesa, sushi e uma sala pensada para almoços demorados, jantares tranquilos e reservas sem fricção.
-          </motion.p>
-
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-            <span className="rounded-full border border-white/10 bg-white/8 px-3 py-2 text-xs uppercase tracking-[0.22em] text-white/76">
-              {restaurantInfo.category}
-            </span>
-            <span className="rounded-full border border-white/10 bg-white/8 px-3 py-2 text-xs uppercase tracking-[0.22em] text-white/76">
-              Desde 1999
-            </span>
-          </div>
-
-          <div className="mt-5 grid w-full gap-2.5 lg:max-w-xl">
-            {heroHighlights.map((item) => (
-              <div key={item} className="rounded-[1.2rem] border border-white/8 bg-white/[0.04] px-4 py-3 text-left text-sm leading-6 text-white/76">
-                {item}
-              </div>
-            ))}
-          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.75, delay: 0.42 }}
-            className="mt-6 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4 lg:mt-8 lg:w-auto lg:justify-start"
+            className="mt-6 flex w-full items-center justify-center gap-3 sm:gap-4 lg:mt-8 lg:w-auto lg:justify-start"
           >
             <Link
-              href="/reservations"
-              className="inline-flex min-h-12 min-w-[9.5rem] items-center justify-center rounded-full bg-champagne px-6 py-3 text-sm font-semibold text-canvas shadow-[0_18px_42px_rgba(161,220,39,0.22)] transition duration-300 hover:bg-[#e4f85b]"
-            >
-              Reservar mesa
-            </Link>
-            <Link
               href="/menu"
-              className="inline-flex min-h-12 min-w-[9.5rem] items-center justify-center rounded-full border border-white/14 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition duration-300 hover:border-white/28 hover:bg-white/16"
+              className="inline-flex min-w-[9.5rem] items-center justify-center rounded-full border border-white/14 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition duration-300 hover:border-white/28 hover:bg-white/16"
             >
               Ver menu
             </Link>
             <Link
               href="/contact"
-              className="inline-flex min-h-12 min-w-[9.5rem] items-center justify-center rounded-full border border-white/14 px-6 py-3 text-sm font-semibold text-white/82 transition duration-300 hover:border-white/28 hover:text-white"
+              className="inline-flex min-w-[9.5rem] items-center justify-center rounded-full border border-white/14 px-6 py-3 text-sm font-semibold text-white/82 transition duration-300 hover:border-white/28 hover:text-white"
             >
               Contactos
             </Link>
           </motion.div>
-          </div>
+
         </motion.div>
       </div>
     </section>
