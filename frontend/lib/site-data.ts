@@ -59,58 +59,58 @@ export const categoryShowcase = [
   {
     title: 'Cozinha da casa',
     description: 'Pratos servidos com identidade própria, conforto e apresentação cuidada.',
-    image: '/images/forno-casa.png'
+    image: '/images/forno-casa.jpg'
   },
   {
     title: 'Sushi bar',
     description: 'Nigiri, sashimi e combinados servidos com uma leitura visual mais limpa.',
-    image: '/images/sushi-boat.png'
+    image: '/images/sushi-boat.jpg'
   },
   {
     title: 'Sala principal',
     description: 'Luz natural, mesas preparadas e um ambiente pensado para almoço e jantar com tempo.',
-    image: '/images/sala-principal.png'
+    image: '/images/sala-principal.jpg'
   }
 ];
 
 export const galleryImages = [
   {
-    src: '/images/sala-principal.png',
+    src: '/images/sala-principal.jpg',
     alt: 'Entrada do restaurante',
     position: 'center center'
   },
   {
-    src: '/images/carne-prato.png',
+    src: '/images/carne-prato.jpg',
     alt: 'Prato de carne da casa',
     position: 'center center'
   },
   {
-    src: '/images/sala-janela.png',
+    src: '/images/sala-janela.jpg',
     alt: 'Sala junto às janelas',
     position: 'center center'
   },
   {
-    src: '/images/forno-casa.png',
+    src: '/images/forno-casa.jpg',
     alt: 'Prato no forno da casa',
     position: 'center center'
   },
   {
-    src: '/images/polvo-servico.png',
+    src: '/images/polvo-servico.jpg',
     alt: 'Polvo servido na nossa casa',
     position: 'center center'
   },
   {
-    src: '/images/sushi-boat.png',
+    src: '/images/sushi-boat.jpg',
     alt: 'Peça decorativa da casa',
     position: 'center center'
   },
   {
-    src: '/images/aperol-bar.png',
+    src: '/images/aperol-bar.jpg',
     alt: 'Sala principal interior',
     position: 'center center'
   },
   {
-    src: '/images/home-hero-path.png',
+    src: '/images/home-hero-path.jpg',
     alt: 'Carbonara da casa',
     position: 'center center'
   }

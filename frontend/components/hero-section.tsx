@@ -21,11 +21,11 @@ export function HeroSection() {
           className="absolute inset-0"
         >
           <Image
-            src="/images/home-hero-food.png"
+            src="/images/home-hero-food.jpg"
             alt="Seleção de pratos do restaurante com carne, peixe, sushi e massa"
             fill
             priority
-            quality={100}
+            unoptimized
             sizes="100vw"
             className="object-cover object-center"
           />

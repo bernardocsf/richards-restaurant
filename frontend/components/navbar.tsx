@@ -61,7 +61,7 @@ export function Navbar() {
 
         <Link href="/" className="flex justify-start xl:justify-center">
           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.22)] sm:h-24 sm:w-24">
-            <Image src="/images/logo.png" alt={restaurantInfo.name} fill className="object-cover" />
+            <Image src="/images/logo.png" alt={restaurantInfo.name} fill unoptimized className="object-cover" />
           </div>
         </Link>
 

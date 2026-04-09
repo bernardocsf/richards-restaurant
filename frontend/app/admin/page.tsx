@@ -20,7 +20,7 @@ export default function AdminPage() {
         badge="Área admin"
         title="Painel protegido para gerir reservas, reviews e sinais operacionais."
         description="Visual limpo, foco em produtividade e integração direta com o backend Express e MongoDB Atlas."
-        image="/images/dining-room.png"
+        image="/images/dining-room.jpg"
       />
 
       <AnimatedSection>

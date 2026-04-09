@@ -18,7 +18,7 @@ export default function ReservationsPage() {
         badge="Reservas"
         title="Reserve uma mesa com uma experiência direta e profissional."
         description="O formulário mostra apenas horários disponíveis, valida a lotação real das mesas e confirma automaticamente a reserva quando existe disponibilidade."
-        image="/images/dining-room.png"
+        image="/images/dining-room.jpg"
       />
 
       <AnimatedSection className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">

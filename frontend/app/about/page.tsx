@@ -15,7 +15,7 @@ export default function AboutPage() {
         badge="Sobre o restaurante"
         title="Uma casa pensada para serviço atento, conforto e uma carta abrangente."
         description="O Richard's Garden Restaurant combina uma sala acolhedora com uma proposta contemporânea que cruza grelhados, peixe, pratos portugueses, massas, saladas, sobremesas e sushi."
-        image="/images/mural-room.png"
+        image="/images/mural-room.jpg"
       />
 
       <AnimatedSection className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">

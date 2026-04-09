@@ -16,6 +16,8 @@ export function HighlightCards() {
               src={card.image}
               alt={card.title}
               fill
+              unoptimized
+              sizes="(min-width: 1280px) 30vw, (min-width: 768px) 50vw, 100vw"
               className="object-cover transition duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(8,8,8,0.85))]" />

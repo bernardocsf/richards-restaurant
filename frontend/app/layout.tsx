@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     title: "Richard's Garden Restaurant",
     description:
       'Cozinha europeia e portuguesa com grelhados, peixe, massas e sushi num ambiente contemporâneo em Lisboa.',
-    images: ['/images/sushi-platter.png'],
+    images: ['/images/sushi-platter.jpg'],
     locale: 'pt_PT',
     type: 'website'
   },

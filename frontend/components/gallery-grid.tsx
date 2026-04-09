@@ -74,6 +74,7 @@ export function GalleryGrid() {
                 src={image.src}
                 alt={image.alt}
                 fill
+                unoptimized
                 className="object-cover transition duration-700 group-hover:scale-[1.06]"
                 style={{ objectPosition: image.position ?? 'center center' }}
               />
@@ -124,6 +125,7 @@ export function GalleryGrid() {
                         <Image
                           src={activeImage.src}
                           alt={activeImage.alt}
+                          unoptimized
                           className="block h-auto max-h-[72vh] w-auto max-w-full"
                         />
                       </motion.div>
