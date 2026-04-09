@@ -68,7 +68,7 @@ export function Navbar() {
         <div className="flex items-center justify-end gap-3">
           <div className="hidden items-center gap-3 xl:flex">
             <a href={`tel:${restaurantInfo.phonePrimary}`} className="button-secondary">
-              Reservar por telefone Bernarod
+              Reservar por telefone
             </a>
             <Link href="/reservations" className="button-primary">
               Reservar mesa
