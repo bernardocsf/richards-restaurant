@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(215, 239, 57, 0.09), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(76, 255, 53, 0.08), transparent 18%),
+    linear-gradient(180deg, #060806 0%, #0b1209 50%, #070907 100%);
+  color: #f8f1e7;
+}
+
+::selection {
+  background: rgba(215, 239, 57, 0.28);
+  color: #0a0c08;
+}
+
+main {
+  position: relative;
+}
+
+main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 82%);
+  pointer-events: none;
+}
+
+@layer components {
+  .content-shell {
+    @apply mx-auto w-full max-w-none px-5 sm:px-8 lg:px-12 2xl:px-16;
+  }
+
+  .glass-panel {
+    @apply border border-borderSoft bg-[rgba(91,132,38,0.08)] shadow-soft backdrop-blur-xl;
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-champagne px-6 py-3 text-sm font-semibold text-canvas shadow-[0_12px_36px_rgba(161,220,39,0.22)] transition duration-300 hover:bg-[#e4f85b];
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-borderSoft bg-[rgba(33,61,19,0.16)] px-6 py-3 text-sm font-semibold text-mist/80 transition duration-300 hover:border-champagne/45 hover:bg-[rgba(79,135,30,0.18)] hover:text-champagne;
+  }
+}
