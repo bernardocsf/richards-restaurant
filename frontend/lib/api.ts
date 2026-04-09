@@ -2,6 +2,33 @@ import { AdminReservationPayload, ReservationPayload, ReviewPayload } from '@/li
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000/api';
 
+type ReservationRecord = {
+  _id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  date: string;
+  time: string;
+  guests: number;
+  notes?: string;
+  tablePreference?: string;
+  source: 'website' | 'phone';
+  assignedTableId?: string;
+  assignedTableType?: 'two_top' | 'four_top' | 'round_eight';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ReviewRecord = {
+  _id: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
 async function handleResponse<T>(response: Response): Promise<T> {
   const data = await response.json();
   if (!response.ok) {
@@ -19,7 +46,7 @@ export async function createReservation(payload: ReservationPayload) {
     body: JSON.stringify(payload)
   });
 
-  return handleResponse<{ message: string; reservation?: Record<string, any> }>(response);
+  return handleResponse<{ message: string; reservation?: ReservationRecord }>(response);
 }
 
 export async function createManualReservation(payload: AdminReservationPayload, adminKey: string) {
@@ -32,7 +59,7 @@ export async function createManualReservation(payload: AdminReservationPayload, 
     body: JSON.stringify(payload)
   });
 
-  return handleResponse<{ message: string; reservation?: Record<string, any> }>(response);
+  return handleResponse<{ message: string; reservation?: ReservationRecord }>(response);
 }
 
 export async function fetchReservationAvailability(date: string, guests: number) {
@@ -60,7 +87,7 @@ export async function fetchReviews() {
     cache: 'no-store'
   });
 
-  return handleResponse<{ reviews: Array<Record<string, any>> }>(response);
+  return handleResponse<{ reviews: ReviewRecord[] }>(response);
 }
 
 export async function fetchAdminReservations(adminKey: string) {
@@ -71,7 +98,7 @@ export async function fetchAdminReservations(adminKey: string) {
     cache: 'no-store'
   });
 
-  return handleResponse<{ reservations: Array<Record<string, any>> }>(response);
+  return handleResponse<{ reservations: ReservationRecord[] }>(response);
 }
 
 export async function updateReservationStatus(id: string, status: string, adminKey: string) {

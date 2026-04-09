@@ -46,7 +46,7 @@ export default function HomePage() {
           className="border-t border-borderSoft pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0"
         >
           <div className="space-y-5 text-base leading-8 text-mist/72">
-            <p>O <span className="text-champagne">Richard's Garden Restaurant</span> marcou presença no evento Troféu Empreendedor Lusófono 2024.</p>
+            <p>O <span className="text-champagne">Richard&apos;s Garden Restaurant</span> marcou presença no evento Troféu Empreendedor Lusófono 2024.</p>
             <p>
               Por se tratar de um empreendimento lusófono de sucesso, o Richard&apos;s Garden esteve presente na gala do Troféu Empreendedor Lusófono 2024, realizada a 18 de janeiro de 2025, no SUD Lisboa.
             </p>

@@ -121,7 +121,7 @@ export function GalleryGrid() {
                         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                         className="flex items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#050605] shadow-luxe"
                       >
-                        <img
+                        <Image
                           src={activeImage.src}
                           alt={activeImage.alt}
                           className="block h-auto max-h-[72vh] w-auto max-w-full"
