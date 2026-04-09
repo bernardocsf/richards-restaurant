@@ -14,7 +14,7 @@ export const env = {
   port: Number(process.env.PORT ?? 4000),
   mongoUri: required('MONGODB_URI', process.env.NODE_ENV === 'test' ? 'mongodb://localhost/test' : undefined),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:3000',
-  adminAccessKey: required('ADMIN_ACCESS_KEY', 'change-me'),
+  adminAccessKey: required('ADMIN_ACCESS_KEY'),
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
   smtpSecure: process.env.SMTP_SECURE === 'true',
