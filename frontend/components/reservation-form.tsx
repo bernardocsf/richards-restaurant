@@ -33,8 +33,7 @@ export function ReservationForm() {
     defaultValues: {
       guests: 2,
       consent: false,
-      notes: '',
-      tablePreference: ''
+      notes: ''
     }
   });
 
@@ -109,7 +108,6 @@ export function ReservationForm() {
         time: '',
         guests: 2,
         notes: '',
-        tablePreference: '',
         consent: false
       });
     } catch (error) {
@@ -122,17 +120,17 @@ export function ReservationForm() {
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm text-mist/70">Nome completo</label>
-          <input className={inputStyles} {...register('fullName')} placeholder="Ex.: Joana Silva" />
+          <input className={inputStyles} {...register('fullName')} />
           {errors.fullName ? <p className="mt-2 text-xs text-rose-300">{errors.fullName.message}</p> : null}
         </div>
         <div>
           <label className="mb-2 block text-sm text-mist/70">Telefone</label>
-          <input className={inputStyles} {...register('phone')} placeholder="910 000 000" />
+          <input className={inputStyles} {...register('phone')} />
           {errors.phone ? <p className="mt-2 text-xs text-rose-300">{errors.phone.message}</p> : null}
         </div>
         <div>
           <label className="mb-2 block text-sm text-mist/70">Email</label>
-          <input className={inputStyles} {...register('email')} placeholder="nome@email.com" type="email" />
+          <input className={inputStyles} {...register('email')} type="email" />
           {errors.email ? <p className="mt-2 text-xs text-rose-300">{errors.email.message}</p> : null}
         </div>
         <div>
@@ -183,12 +181,6 @@ export function ReservationForm() {
       {!loadingSlots && date && guests && slots.length === 0 ? (
         <p className="text-sm text-rose-200">Não há mesas disponíveis para essa data e número de pessoas.</p>
       ) : null}
-
-      <div>
-        <label className="mb-2 block text-sm text-mist/70">Preferência de sala/mesa (opcional)</label>
-        <input className={inputStyles} {...register('tablePreference')} placeholder="Ex.: junto à janela, sala principal" />
-        {errors.tablePreference ? <p className="mt-2 text-xs text-rose-300">{errors.tablePreference.message}</p> : null}
-      </div>
 
       <div>
         <label className="mb-2 block text-sm text-mist/70">Observações</label>

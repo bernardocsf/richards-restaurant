@@ -37,8 +37,7 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
     defaultValues: {
       email: '',
       guests: 2,
-      notes: '',
-      tablePreference: ''
+      notes: ''
     }
   });
 
@@ -109,8 +108,7 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
         date: '',
         time: '',
         guests: 2,
-        notes: '',
-        tablePreference: ''
+        notes: ''
       });
       setSlots([]);
       await onCreated(response.message);
@@ -189,12 +187,6 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
             />
             {errors.time ? <p className="mt-2 text-xs text-rose-300">{errors.time.message}</p> : null}
           </div>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm text-mist/70">Preferência de sala/mesa (opcional)</label>
-          <input className={inputStyles} {...register('tablePreference')} placeholder="Ex.: junto à janela, sala principal" />
-          {errors.tablePreference ? <p className="mt-2 text-xs text-rose-300">{errors.tablePreference.message}</p> : null}
         </div>
 
         <div>

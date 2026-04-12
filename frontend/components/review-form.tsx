@@ -53,7 +53,7 @@ export function ReviewForm({ onSubmitted }: ReviewFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 border-t border-borderSoft pt-6 sm:pt-8">
       <div>
         <label className="mb-2 block text-sm text-mist/70">Nome</label>
-        <input className={inputStyles} {...register('customerName')} placeholder="Ex.: João Pereira" />
+        <input className={inputStyles} {...register('customerName')} />
         {errors.customerName ? <p className="mt-2 text-xs text-rose-300">{errors.customerName.message}</p> : null}
       </div>
 
