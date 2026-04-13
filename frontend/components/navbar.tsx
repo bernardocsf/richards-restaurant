@@ -157,7 +157,7 @@ export function Navbar() {
                       <motion.button
                         type="button"
                         onClick={() => setOpen(false)}
-                        className="relative rounded-full border border-white/12 bg-black/35 p-2 text-white transition hover:border-white/24"
+                        className="relative p-2 text-white transition hover:text-white/80"
                         aria-label="Fechar menu"
                         initial={{ opacity: 0, scale: 0.86, rotate: -18 }}
                         animate={{
@@ -183,7 +183,7 @@ export function Navbar() {
                         whileTap={{ scale: 0.9 }}
                       >
                         <motion.span
-                          className="absolute inset-0 rounded-full bg-white/10 blur-md"
+                          className="absolute inset-0 bg-white/10 blur-md"
                           animate={{ opacity: [0.08, 0.22, 0.08], scale: [0.94, 1.12, 0.94] }}
                           transition={{
                             duration: 1.8,

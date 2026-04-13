@@ -98,21 +98,26 @@ export function GalleryGrid() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[80] flex items-center justify-center bg-black/88 p-4 backdrop-blur-md sm:p-6"
+                  className="fixed inset-0 z-[80] flex items-center justify-center bg-black/88 px-3 py-4 backdrop-blur-md sm:px-5 sm:py-5"
                 >
-                  <div className="relative flex w-full max-w-6xl flex-col items-center gap-4 px-12 sm:px-16">
+                  <div className="relative flex w-full max-w-7xl flex-col items-center gap-3 px-3 sm:gap-4 sm:px-6">
                     <button
                       type="button"
                       aria-label="Fechar galeria"
                       onClick={closeImage}
-                      className="absolute right-0 top-0 z-10 -translate-y-1/2 rounded-full border border-white/12 bg-black/55 p-3 text-white transition hover:border-white/24"
+                      className="absolute right-0 top-0 z-10 -translate-y-[125%] p-2 text-white transition hover:text-white/78 sm:-translate-y-[140%]"
                     >
                       <X className="h-5 w-5" />
                     </button>
 
                     <div className="relative flex w-full items-center justify-center">
-                      <button type="button" aria-label="Imagem anterior" onClick={showPrevious} className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full border border-white/12 bg-black/40 p-3 text-white transition hover:border-white/24">
-                        <ChevronLeft className="h-5 w-5" />
+                      <button
+                        type="button"
+                        aria-label="Imagem anterior"
+                        onClick={showPrevious}
+                        className="absolute left-1 top-1/2 z-10 -translate-y-1/2 p-1 text-white/90 transition hover:text-white sm:left-3"
+                      >
+                        <ChevronLeft className="h-8 w-8 sm:h-10 sm:w-10" />
                       </button>
 
                       <motion.div
@@ -120,18 +125,26 @@ export function GalleryGrid() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 18, scale: 0.98 }}
                         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                        className="flex items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#050605] shadow-luxe"
+                        className="flex w-full items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#050605] shadow-luxe"
                       >
                         <Image
                           src={activeImage.src}
                           alt={activeImage.alt}
+                          width={1600}
+                          height={1067}
                           unoptimized
-                          className="block h-auto max-h-[72vh] w-auto max-w-full"
+                          sizes="100vw"
+                          className="block h-auto max-h-[82vh] w-auto max-w-full"
                         />
                       </motion.div>
 
-                      <button type="button" aria-label="Imagem seguinte" onClick={showNext} className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full border border-white/12 bg-black/40 p-3 text-white transition hover:border-white/24">
-                        <ChevronRight className="h-5 w-5" />
+                      <button
+                        type="button"
+                        aria-label="Imagem seguinte"
+                        onClick={showNext}
+                        className="absolute right-1 top-1/2 z-10 -translate-y-1/2 p-1 text-white/90 transition hover:text-white sm:right-3"
+                      >
+                        <ChevronRight className="h-8 w-8 sm:h-10 sm:w-10" />
                       </button>
                     </div>
 

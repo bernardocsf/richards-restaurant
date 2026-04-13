@@ -1,6 +1,7 @@
 import { Instagram } from 'lucide-react';
 import Link from 'next/link';
-import { restaurantInfo, openingHours } from '@/lib/site-data';
+import { restaurantInfo } from '@/lib/site-data';
+import { OpeningHoursList } from '@/components/opening-hours-list';
 
 export function Footer() {
   return (
@@ -45,13 +46,7 @@ export function Footer() {
 
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-champagne">Horário</p>
-          <div className="mt-4 space-y-2 text-sm leading-7 text-mist/70">
-            {openingHours.map((entry) => (
-              <p key={entry.day}>
-                <span className="font-medium text-ink">{entry.day}:</span> {entry.hours}
-              </p>
-            ))}
-          </div>
+          <OpeningHoursList variant="footer" />
         </div>
       </div>
       <div className="border-t border-borderSoft px-5 py-5 text-center text-[11px] uppercase tracking-[0.18em] text-mist/40 sm:text-xs sm:tracking-[0.22em]">

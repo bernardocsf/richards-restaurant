@@ -9,7 +9,7 @@ import { SectionHeading } from '@/components/section-heading';
 
 export default function HomePage() {
   return (
-    <div className="space-y-18 pb-10 sm:space-y-24">
+    <div className="space-y-14 pb-10 sm:space-y-18">
       <HeroSection />
 
       <AnimatedSection className="grid gap-8 border-t border-borderSoft pt-10 xl:grid-cols-[1.05fr_0.95fr]">
@@ -25,15 +25,12 @@ export default function HomePage() {
           <h2 className="mt-5 font-heading text-3xl leading-[1.12] text-ink sm:text-4xl lg:text-[2.9rem] lg:leading-[1.1]">
             Um restaurante com história, natureza e uma casa aberta a todos.
           </h2>
-          <div className="mt-7 space-y-6 text-base leading-9 text-mist/72">
+          <div className="mt-7 space-y-4 text-base leading-8 text-mist/72">
             <p>
-              A marca Richard&apos;s nasceu em 1999 com a abertura do Richard&apos;s Grill, um restaurante que operou com sucesso durante 15 anos no Clube TAP, em Lisboa.
+              O Richard&apos;s nasceu em 1999 e cresceu em Lisboa com uma proposta centrada em boa comida e serviço próximo.
             </p>
             <p>
-              Com o tempo, surgiu a necessidade de expandir para um espaço mais amplo e único, resultando na criação do Richard&apos;s Garden. Localizado no bairro da Encarnação, em Lisboa, o restaurante oferece um ambiente acolhedor, rodeado de muito verde, arte e uma culinária diversificada.
-            </p>
-            <p>
-              Somos também um restaurante animal friendly. Quando precisar de trazer o seu amigo, dispomos de uma esplanada onde a presença é permitida.
+              Hoje, o Richard&apos;s Garden junta sala acolhedora, muito verde e uma carta pensada para diferentes momentos, do almoço ao jantar.
             </p>
           </div>
         </motion.div>
@@ -45,13 +42,10 @@ export default function HomePage() {
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
           className="border-t border-borderSoft pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0"
         >
-          <div className="space-y-5 text-base leading-8 text-mist/72">
-            <p>O <span className="text-champagne">Richard&apos;s Garden Restaurant</span> marcou presença no evento Troféu Empreendedor Lusófono 2024.</p>
+          <div className="space-y-4 text-base leading-8 text-mist/72">
+            <p>Um espaço tranquilo no bairro da Encarnação, pensado para refeições demoradas e encontros sem pressa.</p>
             <p>
-              Por se tratar de um empreendimento lusófono de sucesso, o Richard&apos;s Garden esteve presente na gala do Troféu Empreendedor Lusófono 2024, realizada a 18 de janeiro de 2025, no SUD Lisboa.
-            </p>
-            <p>
-              Foi um momento importante de reconhecimento e visibilidade para o percurso da marca.
+              A esplanada é animal friendly e a atmosfera combina conforto, detalhe e um ritmo mais leve.
             </p>
           </div>
 
@@ -71,10 +65,10 @@ export default function HomePage() {
             className="mt-8 grid gap-4 sm:grid-cols-2"
           >
             {[
-              { label: 'Animal friendly', value: 'Esplanada disponível' },
+              { label: 'Ambiente', value: 'Calmo e acolhedor' },
               { label: 'Desde', value: '1999' },
               { label: 'Localização', value: 'Bairro da Encarnação' },
-              { label: 'Presença', value: 'Troféu Empreendedor Lusófono' }
+              { label: 'Esplanada', value: 'Animal friendly' }
             ].map((item) => (
               <motion.div
                 key={item.label}
@@ -94,9 +88,9 @@ export default function HomePage() {
         </motion.div>
       </AnimatedSection>
 
-      <AnimatedSection>
+      <AnimatedSection className="-mt-2 pt-0 sm:-mt-4">
         <SectionHeading
-          eyebrow="Sala"
+          eyebrow="Galeria"
           title=""
           description=""
         />
