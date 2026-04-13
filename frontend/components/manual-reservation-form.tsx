@@ -44,6 +44,7 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
   const date = watch('date');
   const guests = watch('guests');
   const selectedTime = watch('time');
+  const hasAvailabilityRequest = Boolean(date && typeof guests === 'number' && Number.isFinite(guests));
 
   useEffect(() => {
     let active = true;
@@ -146,7 +147,7 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
           </div>
           <div>
             <label className="mb-2 block text-sm text-mist/70">Número de pessoas</label>
-            <input className={inputStyles} {...register('guests')} type="number" min={1} max={8} />
+            <input className={inputStyles} {...register('guests', { valueAsNumber: true })} type="number" min={1} max={8} />
             {errors.guests ? <p className="mt-2 text-xs text-rose-300">{errors.guests.message}</p> : null}
           </div>
           <div>
@@ -200,7 +201,7 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
         </p>
 
         {availabilityError ? <p className="text-sm text-rose-200">{availabilityError}</p> : null}
-        {!loadingSlots && date && guests && slots.length === 0 && !availabilityError ? (
+        {!loadingSlots && hasAvailabilityRequest && slots.length === 0 && !availabilityError ? (
           <p className="text-sm text-rose-200">Não há mesas disponíveis para esta combinação de data e pessoas.</p>
         ) : null}
 

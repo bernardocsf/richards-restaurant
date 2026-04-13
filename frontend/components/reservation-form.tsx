@@ -40,6 +40,7 @@ export function ReservationForm() {
   const date = watch('date');
   const guests = watch('guests');
   const selectedTime = watch('time');
+  const hasAvailabilityRequest = Boolean(date && typeof guests === 'number' && Number.isFinite(guests));
 
   useEffect(() => {
     let active = true;
@@ -135,7 +136,14 @@ export function ReservationForm() {
         </div>
         <div>
           <label className="mb-2 block text-sm text-mist/70">Número de pessoas</label>
-          <input className={inputStyles} {...register('guests')} type="number" min={1} max={8} placeholder="2" />
+          <input
+            className={inputStyles}
+            {...register('guests', { valueAsNumber: true })}
+            type="number"
+            min={1}
+            max={8}
+            placeholder="2"
+          />
           {errors.guests ? <p className="mt-2 text-xs text-rose-300">{errors.guests.message}</p> : null}
         </div>
         <div>
@@ -178,7 +186,7 @@ export function ReservationForm() {
         </div>
       </div>
 
-      {!loadingSlots && date && guests && slots.length === 0 ? (
+      {!loadingSlots && hasAvailabilityRequest && slots.length === 0 && !serverError ? (
         <p className="text-sm text-rose-200">Não há mesas disponíveis para essa data e número de pessoas.</p>
       ) : null}
 
