@@ -89,11 +89,13 @@ export default function HomePage() {
       </AnimatedSection>
 
       <AnimatedSection className="-mt-2 pt-0 sm:-mt-4">
-        <SectionHeading
-          eyebrow="Galeria"
-          title=""
-          description=""
-        />
+        <div className="hidden md:block">
+          <SectionHeading
+            eyebrow="Galeria"
+            title=""
+            description=""
+          />
+        </div>
         <GalleryGrid />
       </AnimatedSection>
 

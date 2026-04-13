@@ -3,12 +3,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { type UIEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { galleryImages } from '@/lib/site-data';
+import { cn } from '@/lib/utils';
 
 export function GalleryGrid() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [mobileIndex, setMobileIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   const activeImage = useMemo(
@@ -42,9 +44,96 @@ export function GalleryGrid() {
     };
   }, [activeIndex]);
 
+  function handleMobileScroll(event: UIEvent<HTMLDivElement>) {
+    const container = event.currentTarget;
+    const cards = Array.from(container.children) as HTMLElement[];
+
+    if (!cards.length) return;
+
+    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+    let nearestIndex = 0;
+    let smallestDistance = Number.POSITIVE_INFINITY;
+
+    cards.forEach((card, index) => {
+      const cardCenter = card.offsetLeft + card.clientWidth / 2;
+      const distance = Math.abs(cardCenter - containerCenter);
+
+      if (distance < smallestDistance) {
+        smallestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    setMobileIndex(nearestIndex);
+  }
+
   return (
     <>
-      <div className="grid auto-rows-[16rem] gap-4 md:grid-cols-2 xl:grid-cols-12">
+      <div className="relative md:hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-2">
+          <div className="h-24 w-16 bg-[radial-gradient(circle_at_left,rgba(215,239,57,0.16),transparent_68%)] blur-2xl" />
+        </div>
+
+        <div className="mb-5 flex items-center justify-between px-1 pt-1">
+          <span className="inline-flex rounded-full border border-borderSoft bg-[rgba(94,145,35,0.16)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.34em] text-champagne">
+            Galeria
+          </span>
+          <span className="text-[11px] uppercase tracking-[0.28em] text-white/58">
+            {String(mobileIndex + 1).padStart(2, '0')} / {String(galleryImages.length).padStart(2, '0')}
+          </span>
+        </div>
+
+        <div
+          onScroll={handleMobileScroll}
+          className="scrollbar-none -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {galleryImages.map((image, index) => {
+            const isActive = index === mobileIndex;
+            const distance = Math.abs(index - mobileIndex);
+
+            return (
+              <motion.button
+                key={image.src}
+                type="button"
+                onClick={() => openImage(index)}
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.55, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                className={cn(
+                  'group relative h-[26rem] w-[84vw] max-w-[24rem] shrink-0 snap-center overflow-hidden rounded-[2rem] border border-white/12 bg-[#0b100c] text-left shadow-[0_30px_80px_rgba(0,0,0,0.35)] transition duration-500',
+                  isActive ? 'opacity-100' : 'opacity-70'
+                )}
+                style={{
+                  transform: `perspective(1400px) scale(${isActive ? 1 : 0.94}) rotateY(${isActive ? 0 : index < mobileIndex ? 8 : -8}deg) translateY(${Math.min(distance, 2) * 8}px)`
+                }}
+              >
+                <div className="absolute inset-0">
+                  <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    unoptimized
+                    sizes="84vw"
+                    className="object-cover transition duration-700 group-active:scale-[1.02]"
+                    style={{ objectPosition: image.position ?? 'center center' }}
+                  />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,6,5,0.08),rgba(4,6,5,0.26)_38%,rgba(4,6,5,0.82))]" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(215,239,57,0.22),transparent_34%)] opacity-80" />
+                </div>
+
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <p className="max-w-[16rem] font-heading text-[1.9rem] leading-[1.02] text-white">
+                    {image.alt}
+                  </p>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="hidden auto-rows-[16rem] gap-4 md:grid md:grid-cols-2 xl:grid-cols-12">
         {galleryImages.map((image, index) => (
           <motion.button
             key={image.src}
