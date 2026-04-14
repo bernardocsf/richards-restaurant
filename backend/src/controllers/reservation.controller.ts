@@ -71,10 +71,7 @@ export async function createReservation(req: Request, res: Response) {
     });
 
     return res.status(201).json({
-      message:
-        result.reservation.status === 'pending_review'
-          ? 'Pedido recebido. A reserva ficou pendente de revisão interna devido às características do grupo.'
-          : 'Reserva confirmada com sucesso. Enviámos confirmação imediata por email e WhatsApp sempre que configurados.',
+      message: 'Reserva confirmada com sucesso. Enviámos confirmação imediata por email e WhatsApp sempre que configurados.',
       reservation: result.reservation,
       suggestions: result.suggestions
     });
@@ -96,10 +93,7 @@ export async function createManualReservation(req: Request, res: Response) {
     const result = await createManualReservationService(parsed.data);
 
     return res.status(201).json({
-      message:
-        result.reservation.status === 'pending_review'
-          ? 'Reserva registada, mas marcada para revisão manual.'
-          : 'Reserva telefónica confirmada com sucesso.',
+      message: 'Reserva telefónica confirmada com sucesso.',
       reservation: result.reservation,
       suggestions: result.suggestions
     });
@@ -135,7 +129,6 @@ export async function listReservations(req: Request, res: Response) {
       | 'cancelled_by_restaurant'
       | 'completed'
       | 'no_show'
-      | 'pending_review'
       | undefined) ?? undefined,
     search: getQueryValue(req.query.search)
   });

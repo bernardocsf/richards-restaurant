@@ -5,8 +5,7 @@ export type ReservationStatus =
   | 'cancelled_by_customer'
   | 'cancelled_by_restaurant'
   | 'completed'
-  | 'no_show'
-  | 'pending_review';
+  | 'no_show';
 
 export type ReservationSource = 'website' | 'phone' | 'walk_in';
 
@@ -126,7 +125,7 @@ export const ZONE_CAPACITY: Record<ReservationZone, number> = {
 
 export const RESTAURANT_CAPACITY = 60;
 
-export const BLOCKING_RESERVATION_STATUSES: ReservationStatus[] = ['confirmed_auto', 'pending_review'];
+export const BLOCKING_RESERVATION_STATUSES: ReservationStatus[] = ['confirmed_auto'];
 
 export const DEFAULT_RESERVATION_SETTINGS: ReservationPolicySettings = {
   slotIntervalMinutes: 15,
@@ -323,8 +322,7 @@ export function getReservationStatusLabel(status: ReservationStatus) {
     cancelled_by_customer: 'Cancelada pelo cliente',
     cancelled_by_restaurant: 'Cancelada pelo restaurante',
     completed: 'Concluída',
-    no_show: 'No-show',
-    pending_review: 'Pendente de revisão'
+    no_show: 'No-show'
   };
 
   return labels[status];

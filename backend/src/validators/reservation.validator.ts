@@ -31,7 +31,7 @@ export const manualReservationSchema = z.object({
 });
 
 export const reservationStatusSchema = z.object({
-  status: z.enum(['confirmed_auto', 'cancelled_by_customer', 'cancelled_by_restaurant', 'completed', 'no_show', 'pending_review'])
+  status: z.enum(['confirmed_auto', 'cancelled_by_customer', 'cancelled_by_restaurant', 'completed', 'no_show'])
 });
 
 export const reservationAvailabilitySchema = z.object({
@@ -49,7 +49,7 @@ export const reservationUpdateSchema = z.object({
   guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por reserva.').optional(),
   zone: zoneSchema.optional(),
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional(),
-  status: z.enum(['confirmed_auto', 'cancelled_by_customer', 'cancelled_by_restaurant', 'completed', 'no_show', 'pending_review']).optional()
+  status: z.enum(['confirmed_auto', 'cancelled_by_customer', 'cancelled_by_restaurant', 'completed', 'no_show']).optional()
 });
 
 export const reservationSettingsSchema = z.object({

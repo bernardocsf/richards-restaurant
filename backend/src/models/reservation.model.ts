@@ -36,8 +36,7 @@ const reservationSchema = new Schema(
         'cancelled_by_customer',
         'cancelled_by_restaurant',
         'completed',
-        'no_show',
-        'pending_review'
+        'no_show'
       ] satisfies ReservationStatus[],
       default: 'confirmed_auto'
     },

@@ -41,8 +41,7 @@ const statusLabels: Record<ReservationStatus, string> = {
   cancelled_by_customer: 'Cancelada pelo cliente',
   cancelled_by_restaurant: 'Cancelada pelo restaurante',
   completed: 'Concluída',
-  no_show: 'No-show',
-  pending_review: 'Pendente de revisão'
+  no_show: 'No-show'
 };
 
 function todayKey() {
@@ -83,7 +82,6 @@ export function AdminDashboard() {
   const metrics = useMemo(
     () => ({
       reservations: reservations.length,
-      pendingReview: reservations.filter((item) => item.status === 'pending_review').length,
       reviews: reviews.length,
       blocked: blocks.filter((item) => item.active).length
     }),
@@ -319,7 +317,6 @@ export function AdminDashboard() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
               { label: 'Reservas do dia', value: metrics.reservations },
-              { label: 'Pendentes de revisão', value: metrics.pendingReview },
               { label: 'Bloqueios ativos', value: metrics.blocked },
               { label: 'Reviews', value: metrics.reviews }
             ].map((stat) => (

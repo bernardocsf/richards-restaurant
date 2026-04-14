@@ -166,13 +166,6 @@ function formatReservationDate(date: Date) {
   return new Intl.DateTimeFormat('pt-PT', { dateStyle: 'medium' }).format(date);
 }
 
-function shouldRequireManualReview(input: ReservationInput) {
-  const manualReviewKeywords = ['evento', 'casamento', 'aniversário privado', 'exclusivo'];
-  const notes = (input.notes ?? '').toLowerCase();
-
-  return input.guests >= 13 || manualReviewKeywords.some((keyword) => notes.includes(keyword));
-}
-
 async function evaluateReservationInput(
   data: ReservationInput,
   settings: ReservationPolicySettings,
@@ -229,7 +222,6 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
     );
   }
 
-  const manualReview = shouldRequireManualReview(data);
   const reservation = await ReservationModel.create({
     ...data,
     email: data.email ?? '',
@@ -239,7 +231,7 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
       ? new Date(startAt.getTime() + (settings.reservationDurationMinutes + settings.bufferMinutes) * 60000)
       : startAt,
     source,
-    status: manualReview ? 'pending_review' : 'confirmed_auto',
+    status: 'confirmed_auto',
     referenceCode: generateReservationReference(),
     tableIds: evaluation.assignment.tableIds,
     tableCombinationLabel: formatTableCombination(evaluation.assignment.tableIds),
@@ -249,34 +241,32 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
   let emailNotificationStatus: 'pending' | 'sent' | 'skipped' | 'failed' = reservation.email ? 'failed' : 'skipped';
   let whatsappNotificationStatus: 'pending' | 'sent' | 'skipped' | 'failed' = reservation.phone ? 'failed' : 'skipped';
 
-  if (reservation.status === 'confirmed_auto') {
-    try {
-      const notificationResult = await sendReservationNotifications({
-        customerName: reservation.fullName,
-        phone: reservation.phone,
-        email: reservation.email,
-        dateLabel: formatReservationDate(startAt),
-        time: reservation.time,
-        guests: reservation.guests,
-        zone: reservation.zone,
-        referenceCode: reservation.referenceCode,
-        tableIds: reservation.tableIds,
-        statusLabel: getReservationStatusLabel(reservation.status)
-      });
+  try {
+    const notificationResult = await sendReservationNotifications({
+      customerName: reservation.fullName,
+      phone: reservation.phone,
+      email: reservation.email,
+      dateLabel: formatReservationDate(startAt),
+      time: reservation.time,
+      guests: reservation.guests,
+      zone: reservation.zone,
+      referenceCode: reservation.referenceCode,
+      tableIds: reservation.tableIds,
+      statusLabel: getReservationStatusLabel(reservation.status)
+    });
 
-      emailNotificationStatus = reservation.email
-        ? notificationResult.emailSent
-          ? 'sent'
-          : 'failed'
-        : 'skipped';
-      whatsappNotificationStatus = reservation.phone
-        ? notificationResult.whatsappSent
-          ? 'sent'
-          : 'failed'
-        : 'skipped';
-    } catch (error) {
-      console.error('Notification error:', error);
-    }
+    emailNotificationStatus = reservation.email
+      ? notificationResult.emailSent
+        ? 'sent'
+        : 'failed'
+      : 'skipped';
+    whatsappNotificationStatus = reservation.phone
+      ? notificationResult.whatsappSent
+        ? 'sent'
+        : 'failed'
+      : 'skipped';
+  } catch (error) {
+    console.error('Notification error:', error);
   }
 
   reservation.emailNotificationStatus = emailNotificationStatus;
@@ -286,7 +276,7 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
   return {
     reservation,
     suggestions: evaluation.suggestions,
-    manualReview
+    manualReview: false
   };
 }
 
