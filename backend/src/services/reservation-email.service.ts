@@ -26,7 +26,14 @@ function createTransporter() {
 }
 
 export async function sendEmail(message: EmailMessage) {
-  if (!message.to || !hasSmtpConfig()) return false;
+  if (!message.to) return false;
+
+  if (!hasSmtpConfig()) {
+    console.warn(
+      'Email not sent: SMTP config incomplete. Configure SMTP_PASS for the Gmail sender in backend/.env.'
+    );
+    return false;
+  }
 
   const transporter = createTransporter();
   if (!transporter) return false;
