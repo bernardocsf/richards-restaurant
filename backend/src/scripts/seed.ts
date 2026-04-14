@@ -9,44 +9,53 @@ async function seed() {
   await ReviewModel.deleteMany({});
 
   const todayLunch = new Date();
-  todayLunch.setHours(12, 0, 0, 0);
-  const todayLunchEnd = new Date(todayLunch.getTime() + 180 * 60000);
+  todayLunch.setHours(12, 15, 0, 0);
+  const todayLunchEnd = new Date(todayLunch.getTime() + 135 * 60000);
+
   const tomorrowDinner = new Date(Date.now() + 86400000);
-  tomorrowDinner.setHours(19, 0, 0, 0);
-  const tomorrowDinnerEnd = new Date(tomorrowDinner.getTime() + 180 * 60000);
+  tomorrowDinner.setHours(19, 30, 0, 0);
+  const tomorrowDinnerEnd = new Date(tomorrowDinner.getTime() + 135 * 60000);
 
   await ReservationModel.insertMany([
     {
+      referenceCode: 'RGR-DEMO01',
       fullName: 'Marta Silveira',
       phone: '910000001',
       email: 'marta@example.com',
-      date: todayLunch,
+      date: new Date(todayLunch.getFullYear(), todayLunch.getMonth(), todayLunch.getDate()),
       startAt: todayLunch,
       endAt: todayLunchEnd,
-      time: '12:00',
+      time: '12:15',
       guests: 2,
+      zone: 'interior',
       notes: 'Mesa tranquila, se possível.',
-      tablePreference: 'Junto à janela',
       source: 'website',
-      assignedTableId: 'M2-01',
-      assignedTableType: 'two_top',
-      status: 'confirmed'
+      tableIds: ['I1'],
+      tableCombinationLabel: 'I1',
+      status: 'confirmed_auto',
+      consentAccepted: true,
+      emailNotificationStatus: 'skipped',
+      whatsappNotificationStatus: 'skipped'
     },
     {
+      referenceCode: 'RGR-DEMO02',
       fullName: 'Pedro Costa',
       phone: '910000002',
       email: 'pedro@example.com',
-      date: tomorrowDinner,
+      date: new Date(tomorrowDinner.getFullYear(), tomorrowDinner.getMonth(), tomorrowDinner.getDate()),
       startAt: tomorrowDinner,
       endAt: tomorrowDinnerEnd,
-      time: '19:00',
-      guests: 4,
+      time: '19:30',
+      guests: 6,
+      zone: 'terrace',
       notes: 'Aniversário.',
-      tablePreference: 'Sala principal',
       source: 'phone',
-      assignedTableId: 'M4-01',
-      assignedTableType: 'four_top',
-      status: 'confirmed'
+      tableIds: ['E5', 'E6'],
+      tableCombinationLabel: 'E5 + E6',
+      status: 'confirmed_auto',
+      consentAccepted: false,
+      emailNotificationStatus: 'skipped',
+      whatsappNotificationStatus: 'skipped'
     }
   ]);
 
@@ -68,7 +77,7 @@ async function seed() {
     }
   ]);
 
-  console.log('🌱 Seed concluído com sucesso');
+  console.log('Seed concluído com sucesso');
   process.exit(0);
 }
 

@@ -2,10 +2,10 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { CheckCircle2, LoaderCircle } from 'lucide-react';
+import { CheckCircle2, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { createReservation, fetchReservationAvailability } from '@/lib/api';
+import { createReservation, fetchReservationAvailability, type AvailabilitySuggestion } from '@/lib/api';
 import { ReservationDatePicker } from '@/components/reservation-date-picker';
 import { ReservationTimePicker } from '@/components/reservation-time-picker';
 import { ReservationPayload, reservationSchema } from '@/lib/schemas';
@@ -14,10 +14,16 @@ import { isMondayDate } from '@/lib/utils';
 const inputStyles =
   'w-full rounded-2xl border border-borderSoft bg-[rgba(17,26,13,0.72)] px-4 py-3 text-sm text-ink outline-none transition duration-300 placeholder:text-mist/35 focus:border-champagne/60 focus:ring-2 focus:ring-champagne/15';
 
+const zoneOptions = [
+  { value: 'interior', label: 'Sala interior' },
+  { value: 'terrace', label: 'Esplanada' }
+] as const;
+
 export function ReservationForm() {
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [slots, setSlots] = useState<Array<{ time: string }>>([]);
+  const [suggestions, setSuggestions] = useState<AvailabilitySuggestion[]>([]);
+  const [slots, setSlots] = useState<Array<{ time: string; tableIds: string[]; seats: number }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const {
@@ -32,6 +38,7 @@ export function ReservationForm() {
     resolver: zodResolver(reservationSchema),
     defaultValues: {
       guests: 2,
+      zone: 'interior',
       consent: false,
       notes: ''
     }
@@ -39,16 +46,18 @@ export function ReservationForm() {
 
   const date = watch('date');
   const guests = watch('guests');
+  const zone = watch('zone');
   const selectedTime = watch('time');
-  const hasAvailabilityRequest = Boolean(date && typeof guests === 'number' && Number.isFinite(guests));
+  const hasAvailabilityRequest = Boolean(date && typeof guests === 'number' && Number.isFinite(guests) && zone);
 
   useEffect(() => {
     let active = true;
 
     async function loadAvailability() {
-      if (!date || !guests) {
+      if (!date || !guests || !zone) {
         if (active) {
           setSlots([]);
+          setSuggestions([]);
           setValue('time', '');
         }
         return;
@@ -57,6 +66,7 @@ export function ReservationForm() {
       if (isMondayDate(date)) {
         if (active) {
           setSlots([]);
+          setSuggestions([]);
           setValue('time', '');
           setServerError('À segunda-feira o restaurante está fechado. Escolhe outro dia.');
         }
@@ -66,11 +76,12 @@ export function ReservationForm() {
       try {
         setServerError(null);
         setLoadingSlots(true);
-        const response = await fetchReservationAvailability(date, Number(guests));
+        const response = await fetchReservationAvailability(date, Number(guests), zone);
 
         if (!active) return;
 
         setSlots(response.slots);
+        setSuggestions(response.suggestions);
 
         if (!response.slots.some((slot) => slot.time === selectedTime)) {
           setValue('time', '');
@@ -79,6 +90,7 @@ export function ReservationForm() {
         if (!active) return;
 
         setSlots([]);
+        setSuggestions([]);
         setValue('time', '');
         setServerError(error instanceof Error ? error.message : 'Não foi possível carregar horários disponíveis.');
       } finally {
@@ -93,14 +105,16 @@ export function ReservationForm() {
     return () => {
       active = false;
     };
-  }, [date, guests, selectedTime, setValue]);
+  }, [date, guests, zone, selectedTime, setValue]);
 
   const onSubmit = async (values: ReservationPayload) => {
     try {
       setServerMessage(null);
       setServerError(null);
+      setSuggestions([]);
       const response = await createReservation(values);
       setServerMessage(response.message);
+      setSuggestions(response.suggestions ?? []);
       reset({
         fullName: '',
         phone: '',
@@ -108,11 +122,16 @@ export function ReservationForm() {
         date: '',
         time: '',
         guests: 2,
+        zone: 'interior',
         notes: '',
         consent: false
       });
+      setSlots([]);
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Não foi possível enviar a reserva.');
+      const nextError = error instanceof Error ? error : new Error('Não foi possível enviar a reserva.');
+      setServerError(nextError.message);
+      const details = (nextError as Error & { details?: { suggestions?: AvailabilitySuggestion[] } }).details;
+      setSuggestions(details?.suggestions ?? []);
     }
   };
 
@@ -141,7 +160,7 @@ export function ReservationForm() {
             {...register('guests', { valueAsNumber: true })}
             type="number"
             min={1}
-            max={8}
+            max={15}
             placeholder="2"
           />
           {errors.guests ? <p className="mt-2 text-xs text-rose-300">{errors.guests.message}</p> : null}
@@ -159,6 +178,7 @@ export function ReservationForm() {
                   field.onChange(nextValue);
                   setValue('time', '', { shouldValidate: true });
                   setSlots([]);
+                  setSuggestions([]);
                   setServerError(null);
                 }}
               />
@@ -167,6 +187,26 @@ export function ReservationForm() {
           {errors.date ? <p className="mt-2 text-xs text-rose-300">{errors.date.message}</p> : null}
         </div>
         <div>
+          <label className="mb-2 block text-sm text-mist/70">Zona pretendida</label>
+          <select
+            className={inputStyles}
+            {...register('zone')}
+            onChange={(event) => {
+              setValue('zone', event.target.value as ReservationPayload['zone'], { shouldValidate: true });
+              setValue('time', '', { shouldValidate: true });
+              setSuggestions([]);
+              setServerError(null);
+            }}
+          >
+            {zoneOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {errors.zone ? <p className="mt-2 text-xs text-rose-300">{errors.zone.message}</p> : null}
+        </div>
+        <div className="md:col-span-2">
           <label className="mb-2 block text-sm text-mist/70">Hora disponível</label>
           <Controller
             control={control}
@@ -174,9 +214,9 @@ export function ReservationForm() {
             render={({ field }) => (
               <ReservationTimePicker
                 value={field.value}
-                options={slots}
+                options={slots.map((slot) => ({ time: slot.time }))}
                 loading={loadingSlots}
-                disabled={!date || !guests || loadingSlots || slots.length === 0}
+                disabled={!date || !guests || !zone || loadingSlots || slots.length === 0}
                 onBlur={field.onBlur}
                 onChange={field.onChange}
               />
@@ -187,7 +227,31 @@ export function ReservationForm() {
       </div>
 
       {!loadingSlots && hasAvailabilityRequest && slots.length === 0 && !serverError ? (
-        <p className="text-sm text-rose-200">Não há mesas disponíveis para essa data e número de pessoas.</p>
+        <p className="text-sm text-rose-200">Não há disponibilidade exata nesta zona para esta data e número de pessoas.</p>
+      ) : null}
+
+      {suggestions.length > 0 ? (
+        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-center gap-2 text-sm text-champagne">
+            <Sparkles className="h-4 w-4" />
+            Alternativas automáticas próximas
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {suggestions.map((suggestion) => (
+              <button
+                key={`${suggestion.date}-${suggestion.time}-${suggestion.zone}`}
+                type="button"
+                onClick={() => {
+                  setValue('zone', suggestion.zone, { shouldValidate: true });
+                  setValue('time', suggestion.time, { shouldValidate: true });
+                }}
+                className="rounded-full border border-white/10 px-4 py-2 text-sm text-mist/80 transition hover:border-champagne/45 hover:text-champagne"
+              >
+                {suggestion.label}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <div>
@@ -229,7 +293,7 @@ export function ReservationForm() {
         className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-champagne px-6 py-3 text-sm font-semibold text-canvas shadow-[0_12px_36px_rgba(161,220,39,0.22)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#e4f85b] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        {isSubmitting ? 'A enviar...' : 'Confirmar pedido de reserva'}
+        {isSubmitting ? 'A confirmar...' : 'Confirmar reserva imediata'}
       </button>
     </form>
   );

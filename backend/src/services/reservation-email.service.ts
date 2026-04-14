@@ -1,14 +1,10 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env';
 
-type ReservationEmailInput = {
-  customerName: string;
-  email?: string;
-  dateLabel: string;
-  time: string;
-  guests: number;
-  tableLabel: string;
-  tableId: string;
+type EmailMessage = {
+  to: string;
+  subject: string;
+  text: string;
 };
 
 function hasSmtpConfig() {
@@ -29,29 +25,17 @@ function createTransporter() {
   });
 }
 
-export async function sendReservationConfirmationEmail(input: ReservationEmailInput) {
-  if (!input.email || !hasSmtpConfig()) return false;
+export async function sendEmail(message: EmailMessage) {
+  if (!message.to || !hasSmtpConfig()) return false;
 
   const transporter = createTransporter();
   if (!transporter) return false;
 
   await transporter.sendMail({
     from: env.mailFrom,
-    to: input.email,
-    subject: `Reserva confirmada - ${input.dateLabel} às ${input.time}`,
-    text: [
-      `Olá ${input.customerName},`,
-      '',
-      'A tua reserva foi confirmada automaticamente.',
-      `Data: ${input.dateLabel}`,
-      `Hora: ${input.time}`,
-      `Pessoas: ${input.guests}`,
-      `Mesa atribuída: ${input.tableLabel} (${input.tableId})`,
-      '',
-      'Se precisares de alterar ou cancelar, entra em contacto connosco.',
-      '',
-      "Richard's Garden Restaurant"
-    ].join('\n')
+    to: message.to,
+    subject: message.subject,
+    text: message.text
   });
 
   return true;

@@ -1,8 +1,9 @@
 import { InferSchemaType, Schema, model } from 'mongoose';
-import { TableType } from '../config/reservation-policy';
+import { ReservationSource, ReservationStatus, ReservationZone } from '../config/reservation-policy';
 
 const reservationSchema = new Schema(
   {
+    referenceCode: { type: String, required: true, unique: true, trim: true },
     fullName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     email: { type: String, default: '', trim: true, lowercase: true },
@@ -10,28 +11,53 @@ const reservationSchema = new Schema(
     startAt: { type: Date, required: true },
     endAt: { type: Date, required: true },
     time: { type: String, required: true, trim: true },
-    guests: { type: Number, required: true, min: 1, max: 8 },
-    notes: { type: String, default: '' },
-    tablePreference: { type: String, default: '' },
-    source: {
+    guests: { type: Number, required: true, min: 1, max: 15 },
+    zone: {
       type: String,
-      enum: ['website', 'phone'],
-      default: 'website'
-    },
-    assignedTableId: { type: String, required: true, trim: true },
-    assignedTableType: {
-      type: String,
-      enum: ['two_top', 'four_top', 'round_eight'] satisfies TableType[],
+      enum: ['interior', 'terrace'] satisfies ReservationZone[],
       required: true
     },
+    notes: { type: String, default: '' },
+    consentAccepted: { type: Boolean, default: false },
+    source: {
+      type: String,
+      enum: ['website', 'phone', 'walk_in'] satisfies ReservationSource[],
+      default: 'website'
+    },
+    tableIds: {
+      type: [String],
+      default: []
+    },
+    tableCombinationLabel: { type: String, default: '' },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'cancelled', 'completed'],
-      default: 'confirmed'
+      enum: [
+        'confirmed_auto',
+        'cancelled_by_customer',
+        'cancelled_by_restaurant',
+        'completed',
+        'no_show',
+        'pending_review'
+      ] satisfies ReservationStatus[],
+      default: 'confirmed_auto'
+    },
+    emailNotificationStatus: {
+      type: String,
+      enum: ['pending', 'sent', 'skipped', 'failed'],
+      default: 'pending'
+    },
+    whatsappNotificationStatus: {
+      type: String,
+      enum: ['pending', 'sent', 'skipped', 'failed'],
+      default: 'pending'
     }
   },
   { timestamps: true }
 );
+
+reservationSchema.index({ date: 1, startAt: 1, endAt: 1, zone: 1 });
+reservationSchema.index({ referenceCode: 1 }, { unique: true });
+reservationSchema.index({ fullName: 1, phone: 1, email: 1 });
 
 export type ReservationDocument = InferSchemaType<typeof reservationSchema>;
 export const ReservationModel = model('Reservation', reservationSchema);
