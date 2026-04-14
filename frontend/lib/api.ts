@@ -167,6 +167,17 @@ export async function fetchReviews() {
   return handleResponse<{ reviews: Array<{ _id: string; customerName: string; rating: number; comment: string; createdAt: string }> }>(response);
 }
 
+export async function deleteReview(id: string, adminKey: string) {
+  const response = await fetch(`${API_BASE_URL}/reviews/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'x-admin-key': adminKey
+    }
+  });
+
+  return handleResponse<{ message: string }>(response);
+}
+
 export async function fetchAdminReservations(adminKey: string, params?: { date?: string; zone?: ReservationZone | 'all'; search?: string; status?: ReservationStatus | 'all' }) {
   const query = new URLSearchParams();
 

@@ -1,25 +1,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import {
-  createOperationalBlock,
+  deleteReview,
   fetchAdminReservations,
-  fetchBlocks,
   fetchDashboardSummary,
-  fetchReservationSettings,
   fetchReviews,
-  updateOperationalBlock,
   updateReservation,
-  updateReservationSettings,
   updateReservationStatus,
   type DashboardSummary,
-  type OperationalBlockRecord,
   type ReservationRecord,
-  type ReservationSettings,
   type ReservationStatus,
   type ReservationZone
 } from '@/lib/api';
 import { ManualReservationForm } from '@/components/manual-reservation-form';
+import { ReservationDatePicker } from '@/components/reservation-date-picker';
+import { ReservationTimePicker } from '@/components/reservation-time-picker';
 import { formatDate } from '@/lib/utils';
 import { StarRating } from '@/components/star-rating';
 
@@ -56,13 +53,17 @@ function formatClock(value: string) {
   return value.slice(0, 5);
 }
 
+const halfHourOptions = Array.from({ length: 48 }, (_value, index) => {
+  const hours = String(Math.floor(index / 2)).padStart(2, '0');
+  const minutes = index % 2 === 0 ? '00' : '30';
+  return { time: `${hours}:${minutes}` };
+});
+
 export function AdminDashboard() {
   const [adminKey, setAdminKey] = useState('');
   const [logged, setLogged] = useState(false);
   const [reservations, setReservations] = useState<ReservationRecord[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [blocks, setBlocks] = useState<OperationalBlockRecord[]>([]);
-  const [settings, setSettings] = useState<ReservationSettings | null>(null);
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,30 +73,6 @@ export function AdminDashboard() {
   const [selectedZone, setSelectedZone] = useState<ReservationZone | 'all'>('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | 'all'>('all');
-  const [openingHoursDraft, setOpeningHoursDraft] = useState('');
-  const [blockForm, setBlockForm] = useState({
-    label: '',
-    reason: '',
-    date: todayKey(),
-    startTime: '19:00',
-    endTime: '21:00',
-    zone: 'interior' as ReservationZone,
-    blockType: 'table' as 'table' | 'zone',
-    tableIds: [] as string[]
-  });
-
-  const metrics = useMemo(
-    () => ({
-      reservations: reservations.length,
-      reviews: reviews.length,
-      blocked: blocks.filter((item) => item.active).length
-    }),
-    [reservations, reviews, blocks]
-  );
-
-  const availableTablesForBlock = useMemo(() => {
-    return dashboard?.tables.filter((table) => table.zone === blockForm.zone) ?? [];
-  }, [dashboard, blockForm.zone]);
 
   const reservationsByZone = useMemo(
     () => ({
@@ -114,7 +91,7 @@ export function AdminDashboard() {
     setError(null);
 
     try {
-      const [reservationResponse, reviewResponse, blockResponse, settingsResponse, dashboardResponse] = await Promise.all([
+      const [reservationResponse, reviewResponse, dashboardResponse] = await Promise.all([
         fetchAdminReservations(key, {
           date: selectedDate,
           zone: selectedZone,
@@ -122,16 +99,11 @@ export function AdminDashboard() {
           status: statusFilter
         }),
         fetchReviews(),
-        fetchBlocks(key, { date: selectedDate, zone: selectedZone }),
-        fetchReservationSettings(key),
         fetchDashboardSummary(key, selectedDate, selectedZone, selectedTime)
       ]);
 
       setReservations(reservationResponse.reservations);
       setReviews(reviewResponse.reviews as Review[]);
-      setBlocks(blockResponse.blocks);
-      setSettings(settingsResponse.settings);
-      setOpeningHoursDraft(JSON.stringify(settingsResponse.settings.openingHours, null, 2));
       setDashboard(dashboardResponse);
       setLogged(true);
       setMessage('Painel sincronizado com sucesso.');
@@ -180,65 +152,15 @@ export function AdminDashboard() {
     }
   };
 
-  const handleSettingsSave = async () => {
-    if (!settings) return;
-
+  const handleDeleteReview = async (id: string) => {
     try {
       setError(null);
       setMessage(null);
-      let openingHours: ReservationSettings['openingHours'] | undefined;
-
-      if (openingHoursDraft.trim()) {
-        const parsed = JSON.parse(openingHoursDraft) as ReservationSettings['openingHours'];
-        openingHours = parsed;
-      }
-
-      const response = await updateReservationSettings(
-        {
-          reservationDurationMinutes: settings.reservationDurationMinutes,
-          bufferMinutes: settings.bufferMinutes,
-          slotIntervalMinutes: settings.slotIntervalMinutes,
-          maxGuestsPerReservation: settings.maxGuestsPerReservation,
-          openingHours
-        },
-        adminKey
-      );
-      setSettings(response.settings);
-      setOpeningHoursDraft(JSON.stringify(response.settings.openingHours, null, 2));
+      const response = await deleteReview(id, adminKey);
       setMessage(response.message);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível atualizar as configurações.');
-    }
-  };
-
-  const handleCreateBlock = async () => {
-    try {
-      setError(null);
-      setMessage(null);
-      const response = await createOperationalBlock(blockForm, adminKey);
-      setMessage(response.message);
-      setBlockForm((current) => ({
-        ...current,
-        label: '',
-        reason: '',
-        tableIds: []
-      }));
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível criar o bloqueio.');
-    }
-  };
-
-  const toggleBlock = async (block: OperationalBlockRecord) => {
-    try {
-      setError(null);
-      setMessage(null);
-      const response = await updateOperationalBlock(block._id, !block.active, adminKey);
-      setMessage(response.message);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível atualizar o bloqueio.');
+      setError(err instanceof Error ? err.message : 'Não foi possível eliminar a review.');
     }
   };
 
@@ -262,9 +184,6 @@ export function AdminDashboard() {
             {loading ? 'A carregar...' : logged ? 'Atualizar painel' : 'Entrar'}
           </button>
         </div>
-        <p className="mt-3 text-sm leading-7 text-mist/65">
-          O painel agora mostra reservas automáticas, ocupação por zona, mapa de mesas, bloqueios operacionais e controlo da configuração do motor.
-        </p>
       </div>
 
       {message ? <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">{message}</div> : null}
@@ -276,49 +195,44 @@ export function AdminDashboard() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Dia</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                />
+                <ReservationDatePicker value={selectedDate} onChange={setSelectedDate} />
               </div>
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Hora no mapa</label>
-                <input
-                  type="time"
-                  step={900}
-                  value={selectedTime}
-                  onChange={(event) => setSelectedTime(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                />
+                <ReservationTimePicker value={selectedTime} options={halfHourOptions} onChange={setSelectedTime} />
               </div>
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Zona</label>
-                <select
-                  value={selectedZone}
-                  onChange={(event) => setSelectedZone(event.target.value as ReservationZone | 'all')}
-                  className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                >
-                  <option value="all">Todas as zonas</option>
-                  <option value="interior">Sala interior</option>
-                  <option value="terrace">Esplanada</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={selectedZone}
+                    onChange={(event) => setSelectedZone(event.target.value as ReservationZone | 'all')}
+                    className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 pr-12 text-sm text-ink outline-none"
+                  >
+                    <option value="all">Todas as zonas</option>
+                    <option value="interior">Sala interior</option>
+                    <option value="terrace">Esplanada</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Estado</label>
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value as ReservationStatus | 'all')}
-                  className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                >
-                  <option value="all">Todos</option>
-                  {Object.entries(statusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as ReservationStatus | 'all')}
+                    className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 pr-12 text-sm text-ink outline-none"
+                  >
+                    <option value="all">Todos</option>
+                    {Object.entries(statusLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Pesquisa</label>
@@ -341,291 +255,16 @@ export function AdminDashboard() {
             </div>
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: 'Reservas do dia', value: metrics.reservations },
-              { label: 'Bloqueios ativos', value: metrics.blocked },
-              { label: 'Reviews', value: metrics.reviews }
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-[1.75rem] border border-borderSoft bg-white/[0.04] p-5 shadow-soft">
-                <p className="text-sm uppercase tracking-[0.2em] text-champagne">{stat.label}</p>
-                <p className="mt-4 font-heading text-4xl text-ink">{stat.value}</p>
-              </div>
-            ))}
-          </div>
-
-          <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-            <div className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.2em] text-champagne">Mapa operacional</p>
-                  <h2 className="mt-2 font-heading text-3xl text-ink">Mesas por zona</h2>
-                </div>
-                <div className="text-right text-sm text-mist/65">
-                  <p>{dashboard?.report.day ?? 0} pessoas marcadas neste dia</p>
-                  <p>Estado real das mesas às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}</p>
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-6">
-                {(['interior', 'terrace'] as ReservationZone[]).map((zone) => (
-                  <div key={zone}>
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-heading text-2xl text-ink">{zoneLabels[zone]}</h3>
-                      <p className="text-sm text-mist/65">
-                        {dashboard?.occupancyByZone?.[zone]?.guests ?? 0} / {dashboard?.occupancyByZone?.[zone]?.capacity ?? 0} lugares ocupados às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}
-                      </p>
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {dashboard?.tables
-                        .filter((table) => table.zone === zone)
-                        .map((table) => (
-                          <div
-                            key={table.id}
-                            className={`rounded-[1.25rem] border px-4 py-4 ${
-                              table.state === 'occupied'
-                                ? 'border-amber-300/30 bg-amber-400/10'
-                                : table.state === 'blocked'
-                                  ? 'border-rose-300/30 bg-rose-400/10'
-                                  : 'border-emerald-300/30 bg-emerald-400/10'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <p className="font-semibold text-ink">{table.id}</p>
-                              <span className="text-xs uppercase tracking-[0.18em] text-mist/70">{table.seats} lugares</span>
-                            </div>
-                            <p className="mt-2 text-sm text-mist/70">
-                              {table.state === 'free' ? 'Livre' : table.state === 'occupied' ? 'Ocupada' : 'Bloqueada'}
-                            </p>
-                            {table.reservationReference ? (
-                              <p className="mt-2 text-xs text-mist/65">
-                                {table.reservationReference}
-                                {table.reservationName ? ` · ${table.reservationName}` : ''}
-                              </p>
-                            ) : null}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-                <p className="text-sm uppercase tracking-[0.2em] text-champagne">Regras do motor</p>
-                <h2 className="mt-2 font-heading text-3xl text-ink">Configuração</h2>
-
-                {settings ? (
-                  <div className="mt-6 space-y-4">
-                    <div>
-                      <label className="mb-2 block text-sm text-mist/70">Duração média da reserva</label>
-                      <input
-                        type="number"
-                        min={60}
-                        max={240}
-                        value={settings.reservationDurationMinutes}
-                        onChange={(event) =>
-                          setSettings((current) =>
-                            current
-                              ? { ...current, reservationDurationMinutes: Number(event.target.value) }
-                              : current
-                          )
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-mist/70">Buffer entre reservas</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={60}
-                        value={settings.bufferMinutes}
-                        onChange={(event) =>
-                          setSettings((current) => (current ? { ...current, bufferMinutes: Number(event.target.value) } : current))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-mist/70">Intervalo das reservas</label>
-                      <input
-                        type="number"
-                        min={5}
-                        max={60}
-                        value={settings.slotIntervalMinutes}
-                        onChange={(event) =>
-                          setSettings((current) =>
-                            current ? { ...current, slotIntervalMinutes: Number(event.target.value) } : current
-                          )
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-mist/70">Máximo por reserva</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={settings.maxGuestsPerReservation}
-                        onChange={(event) =>
-                          setSettings((current) =>
-                            current ? { ...current, maxGuestsPerReservation: Number(event.target.value) } : current
-                          )
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm text-mist/70">Horários de funcionamento por dia</label>
-                      <textarea
-                        value={openingHoursDraft}
-                        onChange={(event) => setOpeningHoursDraft(event.target.value)}
-                        className="min-h-40 w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 font-mono text-xs text-ink outline-none"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSettingsSave}
-                      className="w-full rounded-full bg-champagne px-6 py-3 text-sm font-semibold text-canvas transition hover:-translate-y-0.5"
-                    >
-                      Guardar regras
-                    </button>
-                  </div>
-                ) : null}
-              </section>
-
-              <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-                <p className="text-sm uppercase tracking-[0.2em] text-champagne">Bloqueios</p>
-                <h2 className="mt-2 font-heading text-3xl text-ink">Operação da sala</h2>
-                <div className="mt-6 space-y-4">
-                  <input
-                    value={blockForm.label}
-                    onChange={(event) => setBlockForm((current) => ({ ...current, label: event.target.value }))}
-                    placeholder="Ex.: Mesa avariada"
-                    className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                  />
-                  <input
-                    type="date"
-                    value={blockForm.date}
-                    onChange={(event) => setBlockForm((current) => ({ ...current, date: event.target.value }))}
-                    className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <input
-                      type="time"
-                      step={900}
-                      value={blockForm.startTime}
-                      onChange={(event) => setBlockForm((current) => ({ ...current, startTime: event.target.value }))}
-                      className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                    />
-                    <input
-                      type="time"
-                      step={900}
-                      value={blockForm.endTime}
-                      onChange={(event) => setBlockForm((current) => ({ ...current, endTime: event.target.value }))}
-                      className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                    />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <select
-                      value={blockForm.zone}
-                      onChange={(event) =>
-                        setBlockForm((current) => ({
-                          ...current,
-                          zone: event.target.value as ReservationZone,
-                          tableIds: []
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                    >
-                      <option value="interior">Sala interior</option>
-                      <option value="terrace">Esplanada</option>
-                    </select>
-                    <select
-                      value={blockForm.blockType}
-                      onChange={(event) =>
-                        setBlockForm((current) => ({
-                          ...current,
-                          blockType: event.target.value as 'table' | 'zone',
-                          tableIds: []
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                    >
-                      <option value="table">Bloquear mesas</option>
-                      <option value="zone">Bloquear zona inteira</option>
-                    </select>
-                  </div>
-                  {blockForm.blockType === 'table' ? (
-                    <div className="flex flex-wrap gap-2">
-                      {availableTablesForBlock.map((table) => {
-                        const selected = blockForm.tableIds.includes(table.id);
-                        return (
-                          <button
-                            key={table.id}
-                            type="button"
-                            onClick={() =>
-                              setBlockForm((current) => ({
-                                ...current,
-                                tableIds: selected
-                                  ? current.tableIds.filter((tableId) => tableId !== table.id)
-                                  : [...current.tableIds, table.id]
-                              }))
-                            }
-                            className={`rounded-full border px-3 py-2 text-sm transition ${
-                              selected ? 'border-champagne/60 text-champagne' : 'border-white/10 text-mist/75'
-                            }`}
-                          >
-                            {table.id}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                  <textarea
-                    value={blockForm.reason}
-                    onChange={(event) => setBlockForm((current) => ({ ...current, reason: event.target.value }))}
-                    placeholder="Motivo do bloqueio"
-                    className="min-h-24 w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCreateBlock}
-                    className="w-full rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-mist/80 transition hover:border-champagne/45 hover:text-champagne"
-                  >
-                    Criar bloqueio
-                  </button>
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <ManualReservationForm
-            adminKey={adminKey}
-            onError={(nextError) => {
-              setMessage(null);
-              setError(nextError);
-            }}
-            onCreated={async (nextMessage) => {
-              setError(null);
-              setMessage(nextMessage);
-              await refresh();
-            }}
-          />
-
           <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="font-heading text-3xl text-ink">Reservas do dia</h2>
                 <p className="mt-2 text-sm text-mist/65">
-                  Lista completa do dia, ordenada por hora. O mapa acima mostra apenas a ocupação da hora selecionada.
+                  Interior: {reservationsByZone.interior.length} reservas • Esplanada: {reservationsByZone.terrace.length} reservas
                 </p>
               </div>
               <div className="text-sm text-mist/65">
-                Interior: {reservationsByZone.interior.length} reservas • Esplanada: {reservationsByZone.terrace.length} reservas
+                Mapa às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}
               </div>
             </div>
             <div className="mt-6 space-y-4">
@@ -671,45 +310,45 @@ export function AdminDashboard() {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
-                      <input
-                        type="date"
+                      <ReservationDatePicker
                         value={reservation.date.slice(0, 10)}
-                        onChange={(event) =>
+                        onChange={(nextValue) =>
                           setReservations((current) =>
                             current.map((item) =>
-                              item._id === reservation._id ? { ...item, date: event.target.value } : item
+                              item._id === reservation._id ? { ...item, date: nextValue } : item
                             )
                           )
                         }
-                        className="rounded-2xl border border-white/10 bg-[#0f1212] px-4 py-3 text-sm text-ink outline-none"
+                        className="bg-[#0f1212]"
                       />
-                      <input
-                        type="time"
-                        step={900}
+                      <ReservationTimePicker
                         value={reservation.time}
-                        onChange={(event) =>
+                        options={halfHourOptions}
+                        onChange={(nextValue) =>
                           setReservations((current) =>
                             current.map((item) =>
-                              item._id === reservation._id ? { ...item, time: event.target.value } : item
+                              item._id === reservation._id ? { ...item, time: nextValue } : item
                             )
                           )
                         }
-                        className="rounded-2xl border border-white/10 bg-[#0f1212] px-4 py-3 text-sm text-ink outline-none"
                       />
-                      <select
-                        value={reservation.zone}
-                        onChange={(event) =>
-                          setReservations((current) =>
-                            current.map((item) =>
-                              item._id === reservation._id ? { ...item, zone: event.target.value as ReservationZone } : item
+                      <div className="relative">
+                        <select
+                          value={reservation.zone}
+                          onChange={(event) =>
+                            setReservations((current) =>
+                              current.map((item) =>
+                                item._id === reservation._id ? { ...item, zone: event.target.value as ReservationZone } : item
+                              )
                             )
-                          )
-                        }
-                        className="rounded-2xl border border-white/10 bg-[#0f1212] px-4 py-3 text-sm text-ink outline-none"
-                      >
-                        <option value="interior">Sala interior</option>
-                        <option value="terrace">Esplanada</option>
-                      </select>
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-[#0f1212] px-4 py-3 pr-12 text-sm text-ink outline-none"
+                        >
+                          <option value="interior">Sala interior</option>
+                          <option value="terrace">Esplanada</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleMoveReservation(reservation)}
@@ -726,56 +365,110 @@ export function AdminDashboard() {
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <section className="grid gap-6 xl:grid-cols-[1.25fr_0.85fr]">
             <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-              <h2 className="font-heading text-3xl text-ink">Bloqueios ativos e históricos</h2>
-              <div className="mt-6 space-y-4">
-                {blocks.map((block) => (
-                  <article key={block._id} className="rounded-[1.5rem] border border-white/8 bg-[#151819] p-5">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="font-heading text-2xl text-ink">{block.label}</p>
-                        <p className="mt-2 text-sm text-mist/70">
-                          {formatDate(block.date)} • {block.blockType === 'zone' ? 'Zona inteira' : (block.tableIds ?? []).join(', ')} • {zoneLabels[block.zone]}
-                        </p>
-                        <p className="mt-1 text-sm text-mist/55">
-                          {block.startAt.slice(11, 16)} - {block.endAt.slice(11, 16)}
-                        </p>
-                        {block.reason ? <p className="mt-2 text-sm text-mist/65">{block.reason}</p> : null}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleBlock(block)}
-                        className="rounded-full border border-white/10 px-4 py-2 text-sm text-mist/80 transition hover:border-champagne/45 hover:text-champagne"
-                      >
-                        {block.active ? 'Desativar' : 'Reativar'}
-                      </button>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.2em] text-champagne">Mapa operacional</p>
+                  <h2 className="mt-2 font-heading text-3xl text-ink">Mesas por zona</h2>
+                </div>
+                <div className="text-right text-sm text-mist/65">
+                  <p>{dashboard?.report.day ?? 0} pessoas marcadas neste dia</p>
+                  <p>Estado real às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-6">
+                {(['interior', 'terrace'] as ReservationZone[]).map((zone) => (
+                  <div key={zone}>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-heading text-2xl text-ink">{zoneLabels[zone]}</h3>
+                      <p className="text-sm text-mist/65">
+                        {dashboard?.occupancyByZone?.[zone]?.guests ?? 0} / {dashboard?.occupancyByZone?.[zone]?.capacity ?? 0} lugares ocupados
+                      </p>
                     </div>
-                  </article>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {dashboard?.tables
+                        .filter((table) => table.zone === zone)
+                        .map((table) => (
+                          <div
+                            key={table.id}
+                            className={`rounded-[1.25rem] border px-4 py-4 ${
+                              table.state === 'occupied'
+                                ? 'border-amber-300/30 bg-amber-400/10'
+                                : table.state === 'blocked'
+                                  ? 'border-rose-300/30 bg-rose-400/10'
+                                  : 'border-emerald-300/30 bg-emerald-400/10'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <p className="font-semibold text-ink">{table.id}</p>
+                              <span className="text-xs uppercase tracking-[0.18em] text-mist/70">{table.seats} lugares</span>
+                            </div>
+                            <p className="mt-2 text-sm text-mist/70">
+                              {table.state === 'free' ? 'Livre' : table.state === 'occupied' ? 'Ocupada' : 'Bloqueada'}
+                            </p>
+                            {table.reservationReference ? (
+                              <p className="mt-2 text-xs text-mist/65">
+                                {table.reservationReference}
+                                {table.reservationName ? ` · ${table.reservationName}` : ''}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
                 ))}
-                {blocks.length === 0 ? <p className="text-sm text-mist/65">Sem bloqueios para o período selecionado.</p> : null}
               </div>
             </section>
 
-            <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-              <h2 className="font-heading text-3xl text-ink">Reviews</h2>
-              <div className="mt-6 space-y-4">
-                {reviews.map((review) => (
-                  <article key={review._id} className="rounded-[1.5rem] border border-white/8 bg-[#151819] p-5">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <p className="font-heading text-2xl text-ink">{review.customerName}</p>
-                        <p className="mt-2 text-sm text-mist/55">{formatDate(review.createdAt)}</p>
-                        <div className="mt-3">
-                          <StarRating rating={review.rating} />
-                        </div>
-                        <p className="mt-4 text-sm leading-7 text-mist/70">{review.comment}</p>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+            <ManualReservationForm
+              adminKey={adminKey}
+              onError={(nextError) => {
+                setMessage(null);
+                setError(nextError);
+              }}
+              onCreated={async (nextMessage) => {
+                setError(null);
+                setMessage(nextMessage);
+                await refresh();
+              }}
+            />
+          </section>
+
+          <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-champagne">Reviews</p>
+                <h2 className="mt-2 font-heading text-3xl text-ink">Comentários publicados</h2>
               </div>
-            </section>
+              <p className="text-sm text-mist/65">{reviews.length} reviews</p>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {reviews.map((review) => (
+                <article key={review._id} className="rounded-[1.5rem] border border-white/8 bg-[#151819] p-5">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="font-heading text-2xl text-ink">{review.customerName}</p>
+                      <p className="mt-2 text-sm text-mist/55">{formatDate(review.createdAt)}</p>
+                      <div className="mt-3">
+                        <StarRating rating={review.rating} />
+                      </div>
+                      <p className="mt-4 text-sm leading-7 text-mist/70">{review.comment}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReview(review._id)}
+                      className="rounded-full border border-rose-300/30 px-4 py-2 text-sm text-rose-200 transition hover:bg-rose-400/10"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {reviews.length === 0 ? <p className="text-sm text-mist/65">Sem reviews.</p> : null}
+            </div>
           </section>
         </>
       ) : null}

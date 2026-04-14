@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.');
-const timeSchema = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Escolhe um horário válido.');
+const timeSchema = z.string().regex(/^([01]\d|2[0-3]):(00|30)$/, 'Escolhe um horário de 30 em 30 minutos.');
 const zoneSchema = z.enum(['interior', 'terrace'], {
   errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
 });

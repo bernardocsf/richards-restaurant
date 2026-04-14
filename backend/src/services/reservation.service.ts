@@ -107,7 +107,7 @@ export async function getReservationSettings() {
   }
 
   return {
-    slotIntervalMinutes: settings.slotIntervalMinutes ?? DEFAULT_RESERVATION_SETTINGS.slotIntervalMinutes,
+    slotIntervalMinutes: DEFAULT_RESERVATION_SETTINGS.slotIntervalMinutes,
     reservationDurationMinutes:
       settings.reservationDurationMinutes ?? DEFAULT_RESERVATION_SETTINGS.reservationDurationMinutes,
     bufferMinutes: settings.bufferMinutes ?? DEFAULT_RESERVATION_SETTINGS.bufferMinutes,
@@ -123,6 +123,7 @@ export async function updateReservationSettings(input: Partial<ReservationPolicy
   const next = {
     ...current,
     ...input,
+    slotIntervalMinutes: DEFAULT_RESERVATION_SETTINGS.slotIntervalMinutes,
     openingHours: input.openingHours ? normalizeOpeningHours(input.openingHours) : current.openingHours
   };
 

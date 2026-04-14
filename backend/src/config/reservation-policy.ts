@@ -128,7 +128,7 @@ export const RESTAURANT_CAPACITY = 60;
 export const BLOCKING_RESERVATION_STATUSES: ReservationStatus[] = ['confirmed_auto'];
 
 export const DEFAULT_RESERVATION_SETTINGS: ReservationPolicySettings = {
-  slotIntervalMinutes: 15,
+  slotIntervalMinutes: 30,
   reservationDurationMinutes: 120,
   bufferMinutes: 15,
   maxGuestsPerReservation: 15,

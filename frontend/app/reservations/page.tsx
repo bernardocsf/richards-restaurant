@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AnimatedSection } from '@/components/animated-section';
 import { OpeningHoursCard } from '@/components/opening-hours-card';
-import { PageHero } from '@/components/page-hero';
 import { ReservationForm } from '@/components/reservation-form';
 
 export const metadata: Metadata = {
@@ -14,13 +13,6 @@ export const metadata: Metadata = {
 export default function ReservationsPage() {
   return (
     <div className="space-y-12 pb-8">
-      <PageHero
-        badge="Reservas"
-        title="Reserve uma mesa com uma experiência direta e profissional."
-        description="O formulário mostra apenas horários disponíveis, valida a lotação real das mesas e confirma automaticamente a reserva quando existe disponibilidade."
-        image="/images/dining-room.jpg"
-      />
-
       <AnimatedSection className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
         <ReservationForm />
         <div className="space-y-6">

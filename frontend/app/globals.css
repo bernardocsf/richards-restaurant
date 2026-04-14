@@ -19,6 +19,13 @@ body {
   color: #f8f1e7;
 }
 
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none;
+}
+
 ::selection {
   background: rgba(215, 239, 57, 0.28);
   color: #0a0c08;

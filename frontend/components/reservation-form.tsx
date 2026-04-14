@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { CheckCircle2, LoaderCircle, Sparkles } from 'lucide-react';
+import { CheckCircle2, ChevronDown, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { createReservation, fetchReservationAvailability, type AvailabilitySuggestion } from '@/lib/api';
@@ -188,22 +188,25 @@ export function ReservationForm() {
         </div>
         <div>
           <label className="mb-2 block text-sm text-mist/70">Zona pretendida</label>
-          <select
-            className={inputStyles}
-            {...register('zone')}
-            onChange={(event) => {
-              setValue('zone', event.target.value as ReservationPayload['zone'], { shouldValidate: true });
-              setValue('time', '', { shouldValidate: true });
-              setSuggestions([]);
-              setServerError(null);
-            }}
-          >
-            {zoneOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              className={`${inputStyles} pr-12`}
+              {...register('zone')}
+              onChange={(event) => {
+                setValue('zone', event.target.value as ReservationPayload['zone'], { shouldValidate: true });
+                setValue('time', '', { shouldValidate: true });
+                setSuggestions([]);
+                setServerError(null);
+              }}
+            >
+              {zoneOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
+          </div>
           {errors.zone ? <p className="mt-2 text-xs text-rose-300">{errors.zone.message}</p> : null}
         </div>
         <div className="md:col-span-2">

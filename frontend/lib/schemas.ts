@@ -3,13 +3,14 @@ import { z } from 'zod';
 const zoneSchema = z.enum(['interior', 'terrace'], {
   errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
 });
+const halfHourTimeSchema = z.string().regex(/^([01]\d|2[0-3]):(00|30)$/, 'Seleciona uma hora de 30 em 30 minutos.');
 
 export const reservationSchema = z.object({
   fullName: z.string().min(2, 'Indica o teu nome.'),
   phone: z.string().min(6, 'Indica um telefone válido.'),
   email: z.string().email('Indica um email válido.'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleciona uma data válida.'),
-  time: z.string().min(1, 'Seleciona uma hora disponível.'),
+  time: halfHourTimeSchema,
   guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por pedido.'),
   zone: zoneSchema,
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional().or(z.literal('')),
@@ -23,7 +24,7 @@ export const adminReservationSchema = z.object({
   phone: z.string().min(6, 'Indica um telefone válido.'),
   email: z.string().email('Indica um email válido.').optional().or(z.literal('')),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleciona uma data válida.'),
-  time: z.string().min(1, 'Seleciona uma hora disponível.'),
+  time: halfHourTimeSchema,
   guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por reserva.'),
   zone: zoneSchema,
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional().or(z.literal(''))
@@ -33,7 +34,7 @@ export type AdminReservationPayload = z.infer<typeof adminReservationSchema>;
 
 export const adminReservationUpdateSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleciona uma data válida.'),
-  time: z.string().min(1, 'Seleciona uma hora disponível.'),
+  time: halfHourTimeSchema,
   zone: zoneSchema
 });
 

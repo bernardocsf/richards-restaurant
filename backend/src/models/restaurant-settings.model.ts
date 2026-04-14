@@ -11,7 +11,7 @@ const serviceWindowSchema = new Schema(
 const restaurantSettingsSchema = new Schema(
   {
     key: { type: String, required: true, unique: true, default: 'default' },
-    slotIntervalMinutes: { type: Number, required: true, default: 15 },
+    slotIntervalMinutes: { type: Number, required: true, default: 30 },
     reservationDurationMinutes: { type: Number, required: true, default: 120 },
     bufferMinutes: { type: Number, required: true, default: 15 },
     maxGuestsPerReservation: { type: Number, required: true, default: 15 },
