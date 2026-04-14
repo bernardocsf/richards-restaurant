@@ -294,9 +294,8 @@ export function getOpeningSlots(dateKey: string, settings: ReservationPolicySett
   for (const window of windows) {
     let cursor = buildDateTime(dateKey, window.start);
     const windowEnd = buildDateTime(dateKey, window.end);
-    const latestStart = addMinutes(windowEnd, -(settings.reservationDurationMinutes + settings.bufferMinutes));
 
-    while (cursor <= latestStart) {
+    while (cursor < windowEnd) {
       if (cursor > reference) {
         slots.push(formatTime(cursor));
       }

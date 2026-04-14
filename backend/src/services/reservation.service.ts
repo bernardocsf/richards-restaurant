@@ -522,9 +522,11 @@ export async function deleteOperationalBlock(id: string) {
   return OperationalBlockModel.findByIdAndDelete(id);
 }
 
-export async function getReservationDashboardSummary(date: string, zone?: ReservationZone) {
+export async function getReservationDashboardSummary(date: string, zone?: ReservationZone, time = '12:00') {
   const settings = await getReservationSettings();
   const dayStart = buildDateTime(date, '00:00');
+  const referenceTime = isValidTimeValue(time, settings.slotIntervalMinutes) ? time : '12:00';
+  const referenceAt = buildDateTime(date, referenceTime);
   const weekEnd = new Date(dayStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
   const monthEnd = new Date(dayStart);
@@ -548,7 +550,11 @@ export async function getReservationDashboardSummary(date: string, zone?: Reserv
   const occupancyByZone = Object.fromEntries(
     targetZones.map((currentZone) => {
       const guests = reservations
-        .filter((reservation) => reservation.zone === currentZone && BLOCKING_RESERVATION_STATUSES.includes(reservation.status))
+        .filter((reservation) => {
+          if (reservation.zone !== currentZone || !BLOCKING_RESERVATION_STATUSES.includes(reservation.status)) return false;
+          const window = normalizeReservationWindow(reservation, settings);
+          return window ? referenceAt >= window.startAt && referenceAt < window.endAt : false;
+        })
         .reduce((sum, reservation) => sum + reservation.guests, 0);
 
       return [
@@ -566,11 +572,12 @@ export async function getReservationDashboardSummary(date: string, zone?: Reserv
     const activeReservation = reservations.find((reservation) => {
       if (reservation.zone !== table.zone || !BLOCKING_RESERVATION_STATUSES.includes(reservation.status)) return false;
       const window = normalizeReservationWindow(reservation, settings);
-      return window ? window.tableIds.includes(table.id) : false;
+      return window ? window.tableIds.includes(table.id) && referenceAt >= window.startAt && referenceAt < window.endAt : false;
     });
 
     const activeBlock = blocks.find((block) => {
       if (!block.active || block.zone !== table.zone) return false;
+      if (!(referenceAt >= new Date(block.startAt) && referenceAt < new Date(block.endAt))) return false;
       if (block.blockType === 'zone') return true;
       return (block.tableIds ?? []).includes(table.id);
     });
@@ -589,6 +596,7 @@ export async function getReservationDashboardSummary(date: string, zone?: Reserv
   return {
     settings,
     date,
+    referenceTime,
     zone: zone ?? 'all',
     occupancyByZone,
     tables: tableMap,

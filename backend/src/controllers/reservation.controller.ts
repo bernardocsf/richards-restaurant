@@ -267,7 +267,8 @@ export async function getDashboardSummary(req: Request, res: Response) {
 
   const summary = await getReservationDashboardSummary(
     date,
-    (getQueryValue(req.query.zone) as 'interior' | 'terrace' | undefined) ?? undefined
+    (getQueryValue(req.query.zone) as 'interior' | 'terrace' | undefined) ?? undefined,
+    getQueryValue(req.query.time) ?? undefined
   );
 
   return res.json(summary);

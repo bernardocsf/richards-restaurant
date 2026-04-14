@@ -1,11 +1,8 @@
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import type { CSSProperties } from 'react';
 import './globals.css';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 
 export const metadata: Metadata = {
   title: {
@@ -40,7 +37,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-PT" className={`${inter.variable} ${playfair.variable}`}>
+    <html
+      lang="pt-PT"
+      style={
+        {
+          '--font-inter': 'Inter, system-ui, sans-serif',
+          '--font-playfair': '"Playfair Display", Georgia, serif'
+        } as CSSProperties
+      }
+    >
       <body className="font-body antialiased">
         <Navbar />
         <main>

@@ -55,7 +55,6 @@ const reservationSchema = new Schema(
 );
 
 reservationSchema.index({ date: 1, startAt: 1, endAt: 1, zone: 1 });
-reservationSchema.index({ referenceCode: 1 }, { unique: true });
 reservationSchema.index({ fullName: 1, phone: 1, email: 1 });
 
 export type ReservationDocument = InferSchemaType<typeof reservationSchema>;

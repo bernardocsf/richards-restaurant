@@ -52,6 +52,10 @@ function todayKey() {
   return `${year}-${month}-${day}`;
 }
 
+function formatClock(value: string) {
+  return value.slice(0, 5);
+}
+
 export function AdminDashboard() {
   const [adminKey, setAdminKey] = useState('');
   const [logged, setLogged] = useState(false);
@@ -64,6 +68,7 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayKey());
+  const [selectedTime, setSelectedTime] = useState('12:00');
   const [selectedZone, setSelectedZone] = useState<ReservationZone | 'all'>('all');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | 'all'>('all');
@@ -92,6 +97,18 @@ export function AdminDashboard() {
     return dashboard?.tables.filter((table) => table.zone === blockForm.zone) ?? [];
   }, [dashboard, blockForm.zone]);
 
+  const reservationsByZone = useMemo(
+    () => ({
+      interior: reservations
+        .filter((reservation) => reservation.zone === 'interior')
+        .sort((left, right) => left.startAt.localeCompare(right.startAt)),
+      terrace: reservations
+        .filter((reservation) => reservation.zone === 'terrace')
+        .sort((left, right) => left.startAt.localeCompare(right.startAt))
+    }),
+    [reservations]
+  );
+
   const loadData = async (key: string) => {
     setLoading(true);
     setError(null);
@@ -107,7 +124,7 @@ export function AdminDashboard() {
         fetchReviews(),
         fetchBlocks(key, { date: selectedDate, zone: selectedZone }),
         fetchReservationSettings(key),
-        fetchDashboardSummary(key, selectedDate, selectedZone)
+        fetchDashboardSummary(key, selectedDate, selectedZone, selectedTime)
       ]);
 
       setReservations(reservationResponse.reservations);
@@ -256,13 +273,23 @@ export function AdminDashboard() {
       {logged ? (
         <>
           <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Dia</label>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm text-mist/70">Hora no mapa</label>
+                <input
+                  type="time"
+                  step={900}
+                  value={selectedTime}
+                  onChange={(event) => setSelectedTime(event.target.value)}
                   className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
                 />
               </div>
@@ -336,7 +363,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="text-right text-sm text-mist/65">
                   <p>{dashboard?.report.day ?? 0} pessoas marcadas neste dia</p>
-                  <p>Visualização imediata das mesas livres, ocupadas e bloqueadas</p>
+                  <p>Estado real das mesas às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}</p>
                 </div>
               </div>
 
@@ -346,7 +373,7 @@ export function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <h3 className="font-heading text-2xl text-ink">{zoneLabels[zone]}</h3>
                       <p className="text-sm text-mist/65">
-                        {dashboard?.occupancyByZone?.[zone]?.guests ?? 0} / {dashboard?.occupancyByZone?.[zone]?.capacity ?? 0} lugares
+                        {dashboard?.occupancyByZone?.[zone]?.guests ?? 0} / {dashboard?.occupancyByZone?.[zone]?.capacity ?? 0} lugares ocupados às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}
                       </p>
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -590,7 +617,17 @@ export function AdminDashboard() {
           />
 
           <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-            <h2 className="font-heading text-3xl text-ink">Reservas do dia</h2>
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="font-heading text-3xl text-ink">Reservas do dia</h2>
+                <p className="mt-2 text-sm text-mist/65">
+                  Lista completa do dia, ordenada por hora. O mapa acima mostra apenas a ocupação da hora selecionada.
+                </p>
+              </div>
+              <div className="text-sm text-mist/65">
+                Interior: {reservationsByZone.interior.length} reservas • Esplanada: {reservationsByZone.terrace.length} reservas
+              </div>
+            </div>
             <div className="mt-6 space-y-4">
               {reservations.map((reservation) => (
                 <article key={reservation._id} className="rounded-[1.5rem] border border-white/8 bg-[#151819] p-5">

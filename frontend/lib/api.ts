@@ -70,6 +70,7 @@ export type ReservationSettings = {
 export type DashboardSummary = {
   settings: ReservationSettings;
   date: string;
+  referenceTime: string;
   zone: ReservationZone | 'all';
   occupancyByZone: Record<string, { guests: number; capacity: number; occupancyRate: number }>;
   tables: Array<{
@@ -275,9 +276,10 @@ export async function updateOperationalBlock(id: string, active: boolean, adminK
   return handleResponse<{ message: string; block: OperationalBlockRecord }>(response);
 }
 
-export async function fetchDashboardSummary(adminKey: string, date: string, zone: ReservationZone | 'all' = 'all') {
+export async function fetchDashboardSummary(adminKey: string, date: string, zone: ReservationZone | 'all' = 'all', time?: string) {
   const query = new URLSearchParams({ date });
   if (zone !== 'all') query.set('zone', zone);
+  if (time) query.set('time', time);
 
   const response = await fetch(`${API_BASE_URL}/reservations/dashboard?${query.toString()}`, {
     headers: {
