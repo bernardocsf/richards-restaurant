@@ -128,24 +128,6 @@ export function AdminDashboard() {
     [filteredReservations]
   );
 
-  const loadDashboard = async (key: string, options?: { quiet?: boolean }) => {
-    if (!options?.quiet) {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const dashboardResponse = await fetchDashboardSummary(key, selectedDate, selectedZone, referenceTime);
-      setDashboard(dashboardResponse);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível atualizar o estado operacional.');
-    } finally {
-      if (!options?.quiet) {
-        setLoading(false);
-      }
-    }
-  };
-
   const loadData = async (key: string) => {
     setLoading(true);
     setError(null);
@@ -192,8 +174,29 @@ export function AdminDashboard() {
 
   useEffect(() => {
     if (!logged || !adminKey) return;
-    void loadDashboard(adminKey, { quiet: true });
-  }, [adminKey, logged, referenceTime]);
+    let active = true;
+
+    const refreshDashboard = async () => {
+      setError(null);
+
+      try {
+        const dashboardResponse = await fetchDashboardSummary(adminKey, selectedDate, selectedZone, referenceTime);
+        if (active) {
+          setDashboard(dashboardResponse);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Não foi possível atualizar o estado operacional.');
+        }
+      }
+    };
+
+    void refreshDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, [adminKey, logged, referenceTime, selectedDate, selectedZone]);
 
   const handleStatusUpdate = async (id: string, status: ReservationStatus) => {
     try {
