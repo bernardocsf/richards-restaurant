@@ -22,7 +22,13 @@ export function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === '/';
   const menuLinks = isHome ? baseLinks : [{ href: '/', label: 'Home' }, ...baseLinks];
-  const mobileMenuLinks = baseLinks;
+  const mobileMenuLinks = isHome
+    ? [{ href: '/reservations', label: 'Reservar mesa' }, ...baseLinks]
+    : [
+        { href: '/', label: 'Home' },
+        { href: '/reservations', label: 'Reservar mesa' },
+        ...baseLinks
+      ];
 
   useEffect(() => {
     setMounted(true);
@@ -212,6 +218,23 @@ export function Navbar() {
                           {link.label}
                         </Link>
                       ))}
+                    </div>
+
+                    <div className="mt-6 space-y-3 border-t border-white/10 pt-6">
+                      <Link
+                        href="/reservations"
+                        onClick={() => setOpen(false)}
+                        className="button-primary flex w-full items-center justify-center"
+                      >
+                        Reservar mesa
+                      </Link>
+                      <a
+                        href={`tel:${restaurantInfo.phonePrimary}`}
+                        onClick={() => setOpen(false)}
+                        className="button-secondary flex w-full items-center justify-center"
+                      >
+                        Reservar por telefone
+                      </a>
                     </div>
                   </motion.div>
                 </motion.div>

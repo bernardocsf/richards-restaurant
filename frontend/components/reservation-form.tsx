@@ -2,12 +2,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { CheckCircle2, ChevronDown, LoaderCircle, Sparkles } from 'lucide-react';
+import { CheckCircle2, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { createReservation, fetchReservationAvailability, type AvailabilitySuggestion, type ReservationRequestZone } from '@/lib/api';
 import { ReservationDatePicker } from '@/components/reservation-date-picker';
 import { ReservationTimePicker } from '@/components/reservation-time-picker';
+import { ReservationZonePicker } from '@/components/reservation-zone-picker';
 import { ReservationPayload, reservationSchema } from '@/lib/schemas';
 import { isMondayDate } from '@/lib/utils';
 
@@ -150,7 +151,7 @@ export function ReservationForm() {
           {errors.phone ? <p className="mt-2 text-xs text-rose-300">{errors.phone.message}</p> : null}
         </div>
         <div>
-          <label className="mb-2 block text-sm text-mist/70">Email (opcional)</label>
+          <label className="mb-2 block text-sm text-mist/70">Email</label>
           <input className={inputStyles} {...register('email')} type="email" />
           {errors.email ? <p className="mt-2 text-xs text-rose-300">{errors.email.message}</p> : null}
         </div>
@@ -189,25 +190,23 @@ export function ReservationForm() {
         </div>
         <div>
           <label className="mb-2 block text-sm text-mist/70">Zona pretendida</label>
-          <div className="relative">
-            <select
-              className={`${inputStyles} pr-12`}
-              {...register('zone')}
-              onChange={(event) => {
-                setValue('zone', event.target.value as ReservationRequestZone, { shouldValidate: true });
-                setValue('time', '', { shouldValidate: true });
-                setSuggestions([]);
-                setServerError(null);
-              }}
-            >
-              {zoneOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
-          </div>
+          <Controller
+            control={control}
+            name="zone"
+            render={({ field }) => (
+              <ReservationZonePicker
+                value={field.value}
+                onBlur={field.onBlur}
+                options={[...zoneOptions]}
+                onChange={(nextValue) => {
+                  field.onChange(nextValue as ReservationRequestZone);
+                  setValue('time', '', { shouldValidate: true });
+                  setSuggestions([]);
+                  setServerError(null);
+                }}
+              />
+            )}
+          />
           {errors.zone ? <p className="mt-2 text-xs text-rose-300">{errors.zone.message}</p> : null}
         </div>
         <div className="md:col-span-2">

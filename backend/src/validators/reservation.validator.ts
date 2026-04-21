@@ -9,11 +9,12 @@ const publicZoneSchema = z.enum(['interior', 'terrace', 'either'], {
   errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
 });
 const optionalEmailSchema = z.string().email('Email inválido.').optional().or(z.literal(''));
+const requiredEmailSchema = z.string().min(1, 'Indica um email.').email('Email inválido.');
 
 export const reservationSchema = z.object({
   fullName: z.string().min(2, 'Nome demasiado curto.'),
   phone: z.string().min(6, 'Telefone inválido.'),
-  email: optionalEmailSchema,
+  email: requiredEmailSchema,
   date: dateSchema,
   time: timeSchema,
   guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por reserva.'),

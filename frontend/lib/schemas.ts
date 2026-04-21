@@ -11,7 +11,7 @@ const halfHourTimeSchema = z.string().regex(/^([01]\d|2[0-3]):(00|30)$/, 'Seleci
 export const reservationSchema = z.object({
   fullName: z.string().min(2, 'Indica o teu nome.'),
   phone: z.string().min(6, 'Indica um telefone válido.'),
-  email: z.string().email('Indica um email válido.').optional().or(z.literal('')),
+  email: z.string().min(1, 'Indica o teu email.').email('Indica um email válido.'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleciona uma data válida.'),
   time: halfHourTimeSchema,
   guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por pedido.'),

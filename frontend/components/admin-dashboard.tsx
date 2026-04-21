@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import {
   deleteReview,
@@ -102,6 +102,8 @@ export function AdminDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<ServicePeriod>('lunch');
   const [selectedZone, setSelectedZone] = useState<ReservationZone | 'all'>('all');
   const [liveClock, setLiveClock] = useState(currentClockTime());
+  const selectedDateRef = useRef(selectedDate);
+  const selectedZoneRef = useRef(selectedZone);
 
   const referenceTime = useMemo(
     () => getDashboardReferenceTime(selectedDate, selectedPeriod, liveClock),
@@ -173,6 +175,11 @@ export function AdminDashboard() {
   }, [selectedDate]);
 
   useEffect(() => {
+    selectedDateRef.current = selectedDate;
+    selectedZoneRef.current = selectedZone;
+  }, [selectedDate, selectedZone]);
+
+  useEffect(() => {
     if (!logged || !adminKey) return;
     let active = true;
 
@@ -180,7 +187,7 @@ export function AdminDashboard() {
       setError(null);
 
       try {
-        const dashboardResponse = await fetchDashboardSummary(adminKey, selectedDate, selectedZone, referenceTime);
+        const dashboardResponse = await fetchDashboardSummary(adminKey, selectedDateRef.current, selectedZoneRef.current, referenceTime);
         if (active) {
           setDashboard(dashboardResponse);
         }
@@ -196,7 +203,7 @@ export function AdminDashboard() {
     return () => {
       active = false;
     };
-  }, [adminKey, logged, referenceTime, selectedDate, selectedZone]);
+  }, [adminKey, logged, referenceTime]);
 
   const handleStatusUpdate = async (id: string, status: ReservationStatus) => {
     try {
