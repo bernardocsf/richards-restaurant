@@ -10,89 +10,72 @@ type ReservationNotificationPayload = {
   time: string;
   guests: number;
   zone: ReservationZone;
-  referenceCode: string;
-  tableIds: string[];
   statusLabel: string;
 };
 
 type NotificationResult = {
   emailSent: boolean;
-  whatsappSent: boolean;
   restaurantEmailSent: boolean;
-  restaurantWhatsappSent: boolean;
 };
+
+function formatGuestLabel(guests: number) {
+  return guests === 1 ? '1 pessoa' : `${guests} pessoas`;
+}
 
 function reservationSummary(payload: ReservationNotificationPayload) {
   return [
-    `Olá, ${payload.customerName}. A sua reserva foi confirmada para ${payload.dateLabel} às ${payload.time}, para ${payload.guests} pessoa(s), na ${getZoneLabel(payload.zone)}. Referência: ${payload.referenceCode}. Obrigado.`,
+    `Caro(a) ${payload.customerName},`,
     '',
-    `Mesas atribuídas: ${payload.tableIds.join(', ')}`,
-    `Estado: ${payload.statusLabel}`
+    'Agradecemos a sua preferência.',
+    '',
+    `Confirmamos a sua reserva para o dia ${payload.dateLabel}, às ${payload.time}, para ${formatGuestLabel(payload.guests)}, na ${getZoneLabel(payload.zone)}.`,
+    `Estado: ${payload.statusLabel}`,
+    '',
+    'Caso necessite de alterar ou cancelar a reserva, por favor entre em contacto connosco.',
+    '',
+    'Com os melhores cumprimentos,',
+    "Richard's Garden Restaurant"
   ].join('\n');
 }
 
 function restaurantSummary(payload: ReservationNotificationPayload) {
   return [
-    `Nova reserva confirmada: ${payload.referenceCode}`,
+    'Nova reserva confirmada',
     `Cliente: ${payload.customerName}`,
     `Telefone: ${payload.phone}`,
     `Email: ${payload.email || 'sem email'}`,
     `Data: ${payload.dateLabel}`,
     `Hora: ${payload.time}`,
-    `Pessoas: ${payload.guests}`,
+    `Pessoas: ${formatGuestLabel(payload.guests)}`,
     `Zona: ${getZoneLabel(payload.zone)}`,
-    `Mesas: ${payload.tableIds.join(', ')}`,
     `Estado: ${payload.statusLabel}`
   ].join('\n');
-}
-
-async function sendWhatsappMessage(to: string | undefined, body: string) {
-  if (!to || !env.whatsappWebhookUrl) return false;
-
-  const response = await fetch(env.whatsappWebhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(env.whatsappApiToken ? { Authorization: `Bearer ${env.whatsappApiToken}` } : {})
-    },
-    body: JSON.stringify({
-      to,
-      body,
-      sender: env.whatsappSender
-    })
-  });
-
-  return response.ok;
 }
 
 export async function sendReservationNotifications(payload: ReservationNotificationPayload): Promise<NotificationResult> {
   const customerText = reservationSummary(payload);
   const restaurantText = restaurantSummary(payload);
 
-  const [emailSent, whatsappSent, restaurantEmailSent, restaurantWhatsappSent] = await Promise.all([
+  const [emailSent, restaurantEmailSent] = await Promise.all([
     payload.email
       ? sendEmail({
           to: payload.email,
-          subject: `Reserva confirmada - ${payload.dateLabel} às ${payload.time}`,
+          subject: `Confirmacao da sua reserva - ${payload.dateLabel} as ${payload.time}`,
           text: customerText
         })
       : Promise.resolve(false),
-    sendWhatsappMessage(payload.phone, customerText),
     env.restaurantEmail
       ? sendEmail({
           to: env.restaurantEmail,
-          subject: `Nova reserva confirmada - ${payload.referenceCode}`,
+          subject: `Nova reserva confirmada - ${payload.dateLabel} as ${payload.time}`,
           text: restaurantText
         })
-      : Promise.resolve(false),
-    sendWhatsappMessage(env.restaurantWhatsApp, restaurantText)
+      : Promise.resolve(false)
   ]);
 
   return {
     emailSent,
-    whatsappSent,
-    restaurantEmailSent,
-    restaurantWhatsappSent
+    restaurantEmailSent
   };
 }
 

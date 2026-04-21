@@ -1,4 +1,5 @@
 export type ReservationZone = 'interior' | 'terrace';
+export type ReservationRequestZone = ReservationZone | 'either';
 
 export type ReservationStatus =
   | 'confirmed_auto'
@@ -9,14 +10,7 @@ export type ReservationStatus =
 
 export type ReservationSource = 'website' | 'phone' | 'walk_in';
 
-export type BlockType = 'table' | 'zone';
-
-export type TableDefinition = {
-  id: string;
-  zone: ReservationZone;
-  seats: number;
-  neighbors: string[];
-};
+export type BlockType = 'zone';
 
 export type ServiceWindow = {
   start: string;
@@ -30,6 +24,7 @@ export type ReservationPolicySettings = {
   reservationDurationMinutes: number;
   bufferMinutes: number;
   maxGuestsPerReservation: number;
+  zoneCapacities: Record<ReservationZone, { total: number; online: number }>;
   openingHours: OpeningHoursByDay;
 };
 
@@ -44,7 +39,6 @@ export type ReservationLikeRecord = {
   time?: string;
   guests: number;
   zone: ReservationZone;
-  tableIds?: string[];
   status?: string;
   referenceCode?: string;
 };
@@ -56,17 +50,8 @@ export type OperationalBlockRecord = {
   endAt?: Date | string;
   zone: ReservationZone;
   blockType: BlockType;
-  tableIds?: string[];
   reason?: string;
   active?: boolean;
-};
-
-export type TableAssignment = {
-  zone: ReservationZone;
-  tableIds: string[];
-  seats: number;
-  wastedSeats: number;
-  score: number;
 };
 
 export type AvailabilitySuggestion = {
@@ -79,49 +64,16 @@ export type AvailabilitySuggestion = {
 export type AvailabilityEvaluation =
   | {
       success: true;
-      assignment: TableAssignment;
       suggestions: AvailabilitySuggestion[];
       reasons: [];
+      remainingCapacity: number;
     }
   | {
       success: false;
-      assignment: null;
       suggestions: AvailabilitySuggestion[];
       reasons: string[];
+      remainingCapacity: number;
     };
-
-const INTERIOR_TABLES: TableDefinition[] = [
-  { id: 'I1', zone: 'interior', seats: 2, neighbors: ['I2'] },
-  { id: 'I2', zone: 'interior', seats: 2, neighbors: ['I1', 'I3'] },
-  { id: 'I3', zone: 'interior', seats: 2, neighbors: ['I2', 'I4'] },
-  { id: 'I4', zone: 'interior', seats: 2, neighbors: ['I3', 'I5'] },
-  { id: 'I5', zone: 'interior', seats: 2, neighbors: ['I4', 'I6'] },
-  { id: 'I6', zone: 'interior', seats: 2, neighbors: ['I5'] },
-  { id: 'I7', zone: 'interior', seats: 4, neighbors: ['I8'] },
-  { id: 'I8', zone: 'interior', seats: 4, neighbors: ['I7', 'I9'] },
-  { id: 'I9', zone: 'interior', seats: 4, neighbors: ['I8', 'I10'] },
-  { id: 'I10', zone: 'interior', seats: 4, neighbors: ['I9', 'I11'] },
-  { id: 'I11', zone: 'interior', seats: 4, neighbors: ['I10', 'I12'] },
-  { id: 'I12', zone: 'interior', seats: 4, neighbors: ['I11', 'I13'] },
-  { id: 'I13', zone: 'interior', seats: 4, neighbors: ['I12'] }
-];
-
-const TERRACE_TABLES: TableDefinition[] = [
-  { id: 'E1', zone: 'terrace', seats: 2, neighbors: ['E2'] },
-  { id: 'E2', zone: 'terrace', seats: 2, neighbors: ['E1', 'E3'] },
-  { id: 'E3', zone: 'terrace', seats: 2, neighbors: ['E2', 'E4'] },
-  { id: 'E4', zone: 'terrace', seats: 2, neighbors: ['E3'] },
-  { id: 'E5', zone: 'terrace', seats: 4, neighbors: ['E6'] },
-  { id: 'E6', zone: 'terrace', seats: 4, neighbors: ['E5', 'E7'] },
-  { id: 'E7', zone: 'terrace', seats: 4, neighbors: ['E6'] }
-];
-
-export const TABLE_MAP = [...INTERIOR_TABLES, ...TERRACE_TABLES];
-
-export const ZONE_CAPACITY: Record<ReservationZone, number> = {
-  interior: 40,
-  terrace: 20
-};
 
 export const RESTAURANT_CAPACITY = 60;
 
@@ -131,7 +83,11 @@ export const DEFAULT_RESERVATION_SETTINGS: ReservationPolicySettings = {
   slotIntervalMinutes: 30,
   reservationDurationMinutes: 120,
   bufferMinutes: 15,
-  maxGuestsPerReservation: 15,
+  maxGuestsPerReservation: 30,
+  zoneCapacities: {
+    interior: { total: 30, online: 15 },
+    terrace: { total: 30, online: 15 }
+  },
   openingHours: {
     0: [{ start: '12:00', end: '15:00' }],
     1: [],
@@ -158,84 +114,6 @@ export const DEFAULT_RESERVATION_SETTINGS: ReservationPolicySettings = {
   }
 };
 
-const TABLES_BY_ZONE: Record<ReservationZone, TableDefinition[]> = {
-  interior: INTERIOR_TABLES,
-  terrace: TERRACE_TABLES
-};
-
-function isConnectedSubset(tableIds: string[], tablesById: Map<string, TableDefinition>) {
-  if (tableIds.length <= 1) return true;
-
-  const target = new Set(tableIds);
-  const visited = new Set<string>();
-  const queue = [tableIds[0]];
-
-  while (queue.length > 0) {
-    const currentId = queue.shift();
-    if (!currentId || visited.has(currentId)) continue;
-    visited.add(currentId);
-
-    const table = tablesById.get(currentId);
-    if (!table) continue;
-
-    for (const neighborId of table.neighbors) {
-      if (target.has(neighborId) && !visited.has(neighborId)) {
-        queue.push(neighborId);
-      }
-    }
-  }
-
-  return visited.size === tableIds.length;
-}
-
-function enumerateConnectedSubsets(zone: ReservationZone) {
-  const tables = TABLES_BY_ZONE[zone];
-  const tablesById = new Map(tables.map((table) => [table.id, table]));
-  const seen = new Set<string>();
-  const results: string[][] = [];
-
-  for (const table of tables) {
-    const stack: string[][] = [[table.id]];
-
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (!current) continue;
-
-      const key = [...current].sort().join('|');
-      if (seen.has(key)) continue;
-      seen.add(key);
-      results.push(current);
-
-      const neighborCandidates = new Set<string>();
-
-      for (const currentId of current) {
-        const currentTable = tablesById.get(currentId);
-        if (!currentTable) continue;
-
-        for (const neighborId of currentTable.neighbors) {
-          if (!current.includes(neighborId)) {
-            neighborCandidates.add(neighborId);
-          }
-        }
-      }
-
-      for (const neighborId of neighborCandidates) {
-        const next = [...current, neighborId];
-        if (isConnectedSubset(next, tablesById)) {
-          stack.push(next);
-        }
-      }
-    }
-  }
-
-  return results;
-}
-
-const CONNECTED_SUBSETS_BY_ZONE: Record<ReservationZone, string[][]> = {
-  interior: enumerateConnectedSubsets('interior'),
-  terrace: enumerateConnectedSubsets('terrace')
-};
-
 export function isValidDateKey(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -244,6 +122,10 @@ export function isValidTimeValue(value: string, slotIntervalMinutes = DEFAULT_RE
   if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) return false;
   const minutes = Number(value.split(':')[1]);
   return minutes % slotIntervalMinutes === 0;
+}
+
+export function isValidClockTime(value: string) {
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
 }
 
 export function parseDateKey(dateKey: string) {
@@ -315,6 +197,19 @@ export function getZoneLabel(zone: ReservationZone) {
   return zone === 'interior' ? 'Sala interior' : 'Esplanada';
 }
 
+export function getRequestedZones(zone: ReservationRequestZone): ReservationZone[] {
+  return zone === 'either' ? ['interior', 'terrace'] : [zone];
+}
+
+export function getZoneCapacityLimit(
+  zone: ReservationZone,
+  settings: ReservationPolicySettings,
+  source: ReservationSource
+) {
+  const configured = settings.zoneCapacities[zone];
+  return source === 'website' ? configured.online : configured.total;
+}
+
 export function getReservationStatusLabel(status: ReservationStatus) {
   const labels: Record<ReservationStatus, string> = {
     confirmed_auto: 'Confirmada automaticamente',
@@ -325,14 +220,6 @@ export function getReservationStatusLabel(status: ReservationStatus) {
   };
 
   return labels[status];
-}
-
-export function getTableDefinitions(zone: ReservationZone) {
-  return TABLES_BY_ZONE[zone];
-}
-
-export function getTableById(tableId: string) {
-  return TABLE_MAP.find((table) => table.id === tableId) ?? null;
 }
 
 export function overlaps(startA: Date, endA: Date, startB: Date, endB: Date) {
@@ -363,8 +250,7 @@ export function normalizeReservationWindow(
       guests: reservation.guests,
       zone: reservation.zone,
       startAt,
-      endAt,
-      tableIds: reservation.tableIds ?? []
+      endAt
     };
   }
 
@@ -382,8 +268,7 @@ export function normalizeReservationWindow(
     guests: reservation.guests,
     zone: reservation.zone,
     startAt: derivedStart,
-    endAt: derivedEnd,
-    tableIds: reservation.tableIds ?? []
+    endAt: derivedEnd
   };
 }
 
@@ -396,7 +281,6 @@ export function normalizeBlockWindow(block: OperationalBlockRecord) {
       blockId: typeof block._id === 'string' ? block._id : block._id?.toString() ?? 'block',
       zone: block.zone,
       blockType: block.blockType,
-      tableIds: block.tableIds ?? [],
       startAt,
       endAt
     };
@@ -405,63 +289,18 @@ export function normalizeBlockWindow(block: OperationalBlockRecord) {
   return null;
 }
 
-function calculateAssignmentScore(tables: TableDefinition[], guests: number) {
-  const seats = tables.reduce((sum, table) => sum + table.seats, 0);
-  const wastedSeats = seats - guests;
-  const tablesCount = tables.length;
-  const twoTopCount = tables.filter((table) => table.seats === 2).length;
-  const fourTopCount = tables.filter((table) => table.seats === 4).length;
-  const usesLargeForSmallGroup = guests <= 2 && fourTopCount > 0 ? 8 : 0;
-  const fragmentationPenalty = Math.max(0, tablesCount - 1) * 5;
-  const preserveLargeTablePenalty = guests <= 4 ? fourTopCount * 2 : 0;
-  const preferSingleTableBonus = tablesCount === 1 ? -3 : 0;
-
-  return wastedSeats * 10 + fragmentationPenalty + preserveLargeTablePenalty + usesLargeForSmallGroup - twoTopCount + preferSingleTableBonus;
-}
-
-export function findBestTableAssignment(params: {
-  zone: ReservationZone;
-  guests: number;
-  occupiedTableIds: Set<string>;
-}) {
-  const { zone, guests, occupiedTableIds } = params;
-  const tablesById = new Map(getTableDefinitions(zone).map((table) => [table.id, table]));
-  const possibleAssignments = CONNECTED_SUBSETS_BY_ZONE[zone]
-    .filter((subset) => subset.every((tableId) => !occupiedTableIds.has(tableId)))
-    .map((subset) => subset.map((tableId) => tablesById.get(tableId)).filter((table): table is TableDefinition => Boolean(table)))
-    .filter((tables) => tables.reduce((sum, table) => sum + table.seats, 0) >= guests)
-    .map((tables) => {
-      const seats = tables.reduce((sum, table) => sum + table.seats, 0);
-      return {
-        zone,
-        tableIds: tables.map((table) => table.id).sort(),
-        seats,
-        wastedSeats: seats - guests,
-        score: calculateAssignmentScore(tables, guests)
-      } satisfies TableAssignment;
-    })
-    .sort(
-      (left, right) =>
-        left.score - right.score ||
-        left.wastedSeats - right.wastedSeats ||
-        left.tableIds.length - right.tableIds.length ||
-        left.tableIds.join(',').localeCompare(right.tableIds.join(','))
-    );
-
-  return possibleAssignments[0] ?? null;
-}
-
 function runAvailabilityEvaluation(params: {
   date: string;
   time: string;
   guests: number;
   zone: ReservationZone;
+  source: ReservationSource;
   reservations: ReservationLikeRecord[];
   blocks: OperationalBlockRecord[];
   settings: ReservationPolicySettings;
   excludeReservationId?: string;
 }) {
-  const { date, time, guests, zone, reservations, blocks, settings, excludeReservationId } = params;
+  const { date, time, guests, zone, source, reservations, blocks, settings, excludeReservationId } = params;
   const startAt = buildDateTime(date, time);
   const endAt = addMinutes(startAt, settings.reservationDurationMinutes + settings.bufferMinutes);
   const reasons: string[] = [];
@@ -494,13 +333,19 @@ function runAvailabilityEvaluation(params: {
     .reduce((sum, reservation) => sum + reservation.guests, 0);
 
   const totalGuests = overlappingReservations.reduce((sum, reservation) => sum + reservation.guests, 0);
+  const capacityLimit = getZoneCapacityLimit(zone, settings, source);
+  const remainingCapacity = Math.max(0, capacityLimit - zoneGuests);
 
   if (guests > settings.maxGuestsPerReservation) {
     reasons.push(`Máximo de ${settings.maxGuestsPerReservation} pessoas por reserva.`);
   }
 
-  if (zoneGuests + guests > ZONE_CAPACITY[zone]) {
-    reasons.push(`A ${getZoneLabel(zone).toLowerCase()} excede a lotação máxima.`);
+  if (guests > capacityLimit) {
+    reasons.push(`A ${getZoneLabel(zone).toLowerCase()} permite no máximo ${capacityLimit} pessoas para este canal de reserva.`);
+  }
+
+  if (zoneGuests + guests > capacityLimit) {
+    reasons.push(`A ${getZoneLabel(zone).toLowerCase()} não tem capacidade disponível suficiente para esse horário.`);
   }
 
   if (totalGuests + guests > RESTAURANT_CAPACITY) {
@@ -512,93 +357,43 @@ function runAvailabilityEvaluation(params: {
     reasons.push(`${getZoneLabel(zone)} indisponível nesse período.`);
   }
 
-  const occupiedTableIds = new Set<string>();
-
-  for (const reservation of overlappingReservations.filter((entry) => entry.zone === zone)) {
-    for (const tableId of reservation.tableIds) {
-      occupiedTableIds.add(tableId);
-    }
-  }
-
-  for (const block of overlappingBlocks.filter((entry) => entry.zone === zone && entry.blockType === 'table')) {
-    for (const tableId of block.tableIds) {
-      occupiedTableIds.add(tableId);
-    }
-  }
-
-  const assignment = reasons.length === 0 ? findBestTableAssignment({ zone, guests, occupiedTableIds }) : null;
-
-  if (!assignment) {
-    if (!reasons.includes('Não existe combinação válida de mesas adjacentes para esse pedido.')) {
-      reasons.push('Não existe combinação válida de mesas adjacentes para esse pedido.');
-    }
-
+  if (reasons.length > 0) {
     return {
       success: false,
-      assignment: null,
       reasons,
-      suggestions: []
+      suggestions: [],
+      remainingCapacity
     } satisfies AvailabilityEvaluation;
   }
 
-  return {
-    success: true,
-    assignment,
-    reasons: [],
-    suggestions: []
-  } satisfies AvailabilityEvaluation;
+    return {
+      success: true,
+      reasons: [],
+      suggestions: [],
+      remainingCapacity: Math.max(0, capacityLimit - zoneGuests - guests)
+    } satisfies AvailabilityEvaluation;
 }
 
-export function evaluateAvailability(params: {
+function evaluateAvailabilityWithoutSuggestions(params: {
   date: string;
   time: string;
   guests: number;
   zone: ReservationZone;
+  source: ReservationSource;
   reservations: ReservationLikeRecord[];
   blocks: OperationalBlockRecord[];
   settings: ReservationPolicySettings;
   excludeReservationId?: string;
 }) {
-  const { date, time, guests, zone, reservations, blocks, settings, excludeReservationId } = params;
-  const result = runAvailabilityEvaluation(params);
-
-  if (!result.success) {
-    return {
-      ...result,
-      suggestions: buildAlternativeSuggestions({
-        date,
-        time,
-        guests,
-        preferredZone: zone,
-        reservations,
-        blocks,
-        settings,
-        excludeReservationId
-      })
-    } satisfies AvailabilityEvaluation;
-  }
-
-  return {
-    ...result,
-    suggestions: buildAlternativeSuggestions({
-      date,
-      time,
-      guests,
-      preferredZone: zone,
-      reservations,
-      blocks,
-      settings,
-      excludeReservationId,
-      includeExactSlot: false
-    })
-  } satisfies AvailabilityEvaluation;
+  return runAvailabilityEvaluation(params);
 }
 
 export function buildAlternativeSuggestions(params: {
   date: string;
   time: string;
   guests: number;
-  preferredZone: ReservationZone;
+  preferredZone: ReservationRequestZone;
+  source: ReservationSource;
   reservations: ReservationLikeRecord[];
   blocks: OperationalBlockRecord[];
   settings: ReservationPolicySettings;
@@ -610,6 +405,7 @@ export function buildAlternativeSuggestions(params: {
     time,
     guests,
     preferredZone,
+    source,
     reservations,
     blocks,
     settings,
@@ -624,7 +420,13 @@ export function buildAlternativeSuggestions(params: {
     .sort((left, right) => left.distance - right.distance || left.slot.localeCompare(right.slot))
     .map((item) => item.slot);
 
-  const candidateZones: ReservationZone[] = preferredZone === 'interior' ? ['interior', 'terrace'] : ['terrace', 'interior'];
+  const requestedZones = getRequestedZones(preferredZone);
+  const candidateZones: ReservationZone[] =
+    requestedZones.length > 1
+      ? requestedZones
+      : requestedZones[0] === 'interior'
+        ? ['interior', 'terrace']
+        : ['terrace', 'interior'];
   const suggestions: AvailabilitySuggestion[] = [];
   const seen = new Set<string>();
 
@@ -637,6 +439,7 @@ export function buildAlternativeSuggestions(params: {
         time: slot,
         guests,
         zone,
+        source,
         reservations,
         blocks,
         settings,
@@ -665,17 +468,52 @@ export function buildAlternativeSuggestions(params: {
   return suggestions;
 }
 
-function evaluateAvailabilityWithoutSuggestions(params: {
+export function evaluateAvailability(params: {
   date: string;
   time: string;
   guests: number;
   zone: ReservationZone;
+  source: ReservationSource;
   reservations: ReservationLikeRecord[];
   blocks: OperationalBlockRecord[];
   settings: ReservationPolicySettings;
   excludeReservationId?: string;
 }) {
-  return runAvailabilityEvaluation(params);
+  const { date, time, guests, zone, source, reservations, blocks, settings, excludeReservationId } = params;
+  const result = runAvailabilityEvaluation(params);
+
+  if (!result.success) {
+    return {
+      ...result,
+      suggestions: buildAlternativeSuggestions({
+        date,
+        time,
+        guests,
+        preferredZone: zone,
+        source,
+        reservations,
+        blocks,
+        settings,
+        excludeReservationId
+      })
+    } satisfies AvailabilityEvaluation;
+  }
+
+  return {
+    ...result,
+    suggestions: buildAlternativeSuggestions({
+        date,
+        time,
+        guests,
+        preferredZone: zone,
+        source,
+        reservations,
+        blocks,
+        settings,
+      excludeReservationId,
+      includeExactSlot: false
+    })
+  } satisfies AvailabilityEvaluation;
 }
 
 export function generateReservationReference() {

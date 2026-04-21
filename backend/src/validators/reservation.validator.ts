@@ -5,16 +5,19 @@ const timeSchema = z.string().regex(/^([01]\d|2[0-3]):(00|30)$/, 'Escolhe um hor
 const zoneSchema = z.enum(['interior', 'terrace'], {
   errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
 });
+const publicZoneSchema = z.enum(['interior', 'terrace', 'either'], {
+  errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
+});
 const optionalEmailSchema = z.string().email('Email inválido.').optional().or(z.literal(''));
 
 export const reservationSchema = z.object({
   fullName: z.string().min(2, 'Nome demasiado curto.'),
   phone: z.string().min(6, 'Telefone inválido.'),
-  email: z.string().email('Email inválido.'),
+  email: optionalEmailSchema,
   date: dateSchema,
   time: timeSchema,
-  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por reserva.'),
-  zone: zoneSchema,
+  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por reserva.'),
+  zone: publicZoneSchema,
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional().or(z.literal('')),
   consent: z.boolean().refine((value) => value, 'É necessário consentimento.')
 });
@@ -25,7 +28,7 @@ export const manualReservationSchema = z.object({
   email: optionalEmailSchema,
   date: dateSchema,
   time: timeSchema,
-  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por reserva.'),
+  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por reserva.'),
   zone: zoneSchema,
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional().or(z.literal(''))
 });
@@ -36,8 +39,8 @@ export const reservationStatusSchema = z.object({
 
 export const reservationAvailabilitySchema = z.object({
   date: dateSchema,
-  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas.'),
-  zone: zoneSchema
+  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas.'),
+  zone: publicZoneSchema
 });
 
 export const reservationUpdateSchema = z.object({
@@ -46,26 +49,56 @@ export const reservationUpdateSchema = z.object({
   email: optionalEmailSchema.optional(),
   date: dateSchema.optional(),
   time: timeSchema.optional(),
-  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por reserva.').optional(),
+  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por reserva.').optional(),
   zone: zoneSchema.optional(),
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional(),
   status: z.enum(['confirmed_auto', 'cancelled_by_customer', 'cancelled_by_restaurant', 'completed', 'no_show']).optional()
 });
 
-export const reservationSettingsSchema = z.object({
-  slotIntervalMinutes: z.coerce.number().min(5).max(60).optional(),
-  reservationDurationMinutes: z.coerce.number().min(60).max(240).optional(),
-  bufferMinutes: z.coerce.number().min(0).max(60).optional(),
-  maxGuestsPerReservation: z.coerce.number().min(1).max(20).optional(),
-  openingHours: z.record(
-    z.array(
-      z.object({
-        start: timeSchema,
-        end: timeSchema
+export const reservationSettingsSchema = z
+  .object({
+    slotIntervalMinutes: z.coerce.number().min(5).max(60).optional(),
+    reservationDurationMinutes: z.coerce.number().min(60).max(240).optional(),
+    bufferMinutes: z.coerce.number().min(0).max(60).optional(),
+    maxGuestsPerReservation: z.coerce.number().min(1).max(60).optional(),
+    zoneCapacities: z
+      .object({
+        interior: z.object({
+          total: z.coerce.number().min(0).max(200),
+          online: z.coerce.number().min(0).max(200)
+        }),
+        terrace: z.object({
+          total: z.coerce.number().min(0).max(200),
+          online: z.coerce.number().min(0).max(200)
+        })
       })
-    )
-  ).optional()
-});
+      .optional(),
+    openingHours: z.record(
+      z.array(
+        z.object({
+          start: timeSchema,
+          end: timeSchema
+        })
+      )
+    ).optional()
+  })
+  .superRefine((value, ctx) => {
+    if (value.zoneCapacities?.interior && value.zoneCapacities.interior.online > value.zoneCapacities.interior.total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A capacidade online do interior não pode exceder a capacidade total.',
+        path: ['zoneCapacities', 'interior', 'online']
+      });
+    }
+
+    if (value.zoneCapacities?.terrace && value.zoneCapacities.terrace.online > value.zoneCapacities.terrace.total) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A capacidade online da esplanada não pode exceder a capacidade total.',
+        path: ['zoneCapacities', 'terrace', 'online']
+      });
+    }
+  });
 
 export const operationalBlockSchema = z
   .object({
@@ -75,17 +108,7 @@ export const operationalBlockSchema = z
     startTime: timeSchema,
     endTime: timeSchema,
     zone: zoneSchema,
-    blockType: z.enum(['table', 'zone']),
-    tableIds: z.array(z.string().min(1)).optional()
-  })
-  .superRefine((value, ctx) => {
-    if (value.blockType === 'table' && (!value.tableIds || value.tableIds.length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Seleciona pelo menos uma mesa.',
-        path: ['tableIds']
-      });
-    }
+    blockType: z.literal('zone')
   });
 
 export const operationalBlockToggleSchema = z.object({

@@ -1,0 +1,9 @@
+{
+  "/reviews/page": "app/reviews/page.js",
+  "/page": "app/page.js",
+  "/reservations/page": "app/reservations/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/menu/page": "app/menu/page.js",
+  "/contact/page": "app/contact/page.js",
+  "/about/page": "app/about/page.js"
+}

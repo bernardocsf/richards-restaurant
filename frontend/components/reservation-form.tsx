@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, ChevronDown, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { createReservation, fetchReservationAvailability, type AvailabilitySuggestion } from '@/lib/api';
+import { createReservation, fetchReservationAvailability, type AvailabilitySuggestion, type ReservationRequestZone } from '@/lib/api';
 import { ReservationDatePicker } from '@/components/reservation-date-picker';
 import { ReservationTimePicker } from '@/components/reservation-time-picker';
 import { ReservationPayload, reservationSchema } from '@/lib/schemas';
@@ -15,6 +15,7 @@ const inputStyles =
   'w-full rounded-2xl border border-borderSoft bg-[rgba(17,26,13,0.72)] px-4 py-3 text-sm text-ink outline-none transition duration-300 placeholder:text-mist/35 focus:border-champagne/60 focus:ring-2 focus:ring-champagne/15';
 
 const zoneOptions = [
+  { value: 'either', label: 'Indiferente' },
   { value: 'interior', label: 'Sala interior' },
   { value: 'terrace', label: 'Esplanada' }
 ] as const;
@@ -23,7 +24,7 @@ export function ReservationForm() {
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<AvailabilitySuggestion[]>([]);
-  const [slots, setSlots] = useState<Array<{ time: string; tableIds: string[]; seats: number }>>([]);
+  const [slots, setSlots] = useState<Array<{ time: string; remainingCapacity: number }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const {
@@ -38,7 +39,7 @@ export function ReservationForm() {
     resolver: zodResolver(reservationSchema),
     defaultValues: {
       guests: 2,
-      zone: 'interior',
+      zone: 'either',
       consent: false,
       notes: ''
     }
@@ -122,7 +123,7 @@ export function ReservationForm() {
         date: '',
         time: '',
         guests: 2,
-        zone: 'interior',
+        zone: 'either',
         notes: '',
         consent: false
       });
@@ -139,7 +140,7 @@ export function ReservationForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 border-t border-borderSoft pt-6 sm:pt-8">
       <div className="grid gap-5 md:grid-cols-2">
         <div>
-          <label className="mb-2 block text-sm text-mist/70">Nome completo</label>
+          <label className="mb-2 block text-sm text-mist/70">Nome</label>
           <input className={inputStyles} {...register('fullName')} />
           {errors.fullName ? <p className="mt-2 text-xs text-rose-300">{errors.fullName.message}</p> : null}
         </div>
@@ -149,7 +150,7 @@ export function ReservationForm() {
           {errors.phone ? <p className="mt-2 text-xs text-rose-300">{errors.phone.message}</p> : null}
         </div>
         <div>
-          <label className="mb-2 block text-sm text-mist/70">Email</label>
+          <label className="mb-2 block text-sm text-mist/70">Email (opcional)</label>
           <input className={inputStyles} {...register('email')} type="email" />
           {errors.email ? <p className="mt-2 text-xs text-rose-300">{errors.email.message}</p> : null}
         </div>
@@ -160,7 +161,7 @@ export function ReservationForm() {
             {...register('guests', { valueAsNumber: true })}
             type="number"
             min={1}
-            max={15}
+            max={30}
             placeholder="2"
           />
           {errors.guests ? <p className="mt-2 text-xs text-rose-300">{errors.guests.message}</p> : null}
@@ -193,7 +194,7 @@ export function ReservationForm() {
               className={`${inputStyles} pr-12`}
               {...register('zone')}
               onChange={(event) => {
-                setValue('zone', event.target.value as ReservationPayload['zone'], { shouldValidate: true });
+                setValue('zone', event.target.value as ReservationRequestZone, { shouldValidate: true });
                 setValue('time', '', { shouldValidate: true });
                 setSuggestions([]);
                 setServerError(null);
@@ -245,9 +246,9 @@ export function ReservationForm() {
                 key={`${suggestion.date}-${suggestion.time}-${suggestion.zone}`}
                 type="button"
                 onClick={() => {
-                  setValue('zone', suggestion.zone, { shouldValidate: true });
-                  setValue('time', suggestion.time, { shouldValidate: true });
-                }}
+                    setValue('zone', suggestion.zone as ReservationRequestZone, { shouldValidate: true });
+                    setValue('time', suggestion.time, { shouldValidate: true });
+                  }}
                 className="rounded-full border border-white/10 px-4 py-2 text-sm text-mist/80 transition hover:border-champagne/45 hover:text-champagne"
               >
                 {suggestion.label}

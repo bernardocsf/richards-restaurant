@@ -20,7 +20,7 @@ export default function ReservationsPage() {
             <p className="text-sm uppercase tracking-[0.28em] text-champagne">Notas de serviço</p>
             <h2 className="mt-4 font-heading text-3xl text-ink">Pedido enviado, equipa informada.</h2>
             <p className="mt-4 text-sm leading-7 text-mist/72">
-              As reservas online são confirmadas automaticamente quando existe uma mesa compatível livre. O sistema trabalha com disponibilidade real, intervalos de 15 minutos e bloqueio de mesa durante 3 horas para manter o mapa de sala consistente.
+              As reservas online são confirmadas automaticamente quando existe capacidade disponível na zona escolhida. O sistema trabalha com lotação por zona, horários reais e uma margem operacional para manter o serviço simples no dia a dia.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/contact" className="rounded-full border border-borderSoft px-5 py-3 text-sm text-mist/80 transition hover:border-champagne/45 hover:text-champagne">

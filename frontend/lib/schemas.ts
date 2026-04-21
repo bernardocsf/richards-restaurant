@@ -3,16 +3,19 @@ import { z } from 'zod';
 const zoneSchema = z.enum(['interior', 'terrace'], {
   errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
 });
+const publicZoneSchema = z.enum(['interior', 'terrace', 'either'], {
+  errorMap: () => ({ message: 'Seleciona a zona pretendida.' })
+});
 const halfHourTimeSchema = z.string().regex(/^([01]\d|2[0-3]):(00|30)$/, 'Seleciona uma hora de 30 em 30 minutos.');
 
 export const reservationSchema = z.object({
   fullName: z.string().min(2, 'Indica o teu nome.'),
   phone: z.string().min(6, 'Indica um telefone válido.'),
-  email: z.string().email('Indica um email válido.'),
+  email: z.string().email('Indica um email válido.').optional().or(z.literal('')),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleciona uma data válida.'),
   time: halfHourTimeSchema,
-  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por pedido.'),
-  zone: zoneSchema,
+  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por pedido.'),
+  zone: publicZoneSchema,
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional().or(z.literal('')),
   consent: z.boolean().refine((value) => value, 'É necessário aceitar o tratamento de dados.')
 });
@@ -25,7 +28,7 @@ export const adminReservationSchema = z.object({
   email: z.string().email('Indica um email válido.').optional().or(z.literal('')),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Seleciona uma data válida.'),
   time: halfHourTimeSchema,
-  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(15, 'Máximo 15 pessoas por reserva.'),
+  guests: z.coerce.number().min(1, 'Mínimo 1 pessoa.').max(30, 'Máximo 30 pessoas por reserva.'),
   zone: zoneSchema,
   notes: z.string().max(500, 'Máximo 500 caracteres.').optional().or(z.literal(''))
 });
@@ -47,11 +50,15 @@ export const operationalBlockSchema = z.object({
   startTime: z.string().min(1, 'Seleciona a hora de início.'),
   endTime: z.string().min(1, 'Seleciona a hora de fim.'),
   zone: zoneSchema,
-  blockType: z.enum(['table', 'zone']),
-  tableIds: z.array(z.string()).optional()
+  blockType: z.literal('zone')
 });
 
 export type OperationalBlockPayload = z.infer<typeof operationalBlockSchema>;
+
+export const zoneCapacitySchema = z.object({
+  total: z.coerce.number().min(0, 'Indica uma capacidade válida.').max(200, 'Capacidade demasiado alta.'),
+  online: z.coerce.number().min(0, 'Indica uma capacidade online válida.').max(200, 'Capacidade demasiado alta.')
+});
 
 export const reviewSchema = z.object({
   customerName: z.string().min(2, 'Indica o teu nome.'),

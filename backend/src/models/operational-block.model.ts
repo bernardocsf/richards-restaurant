@@ -15,12 +15,8 @@ const operationalBlockSchema = new Schema(
     },
     blockType: {
       type: String,
-      enum: ['table', 'zone'] satisfies BlockType[],
+      enum: ['zone'] satisfies BlockType[],
       required: true
-    },
-    tableIds: {
-      type: [String],
-      default: []
     },
     active: { type: Boolean, default: true }
   },

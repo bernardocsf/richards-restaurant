@@ -12,18 +12,18 @@ import {
   getDayBounds,
   getOpeningSlots,
   getReservationStatusLabel,
-  getTableDefinitions,
+  getRequestedZones,
   getZoneLabel,
   isTimeWithinOpeningHours,
+  isValidClockTime,
   isValidDateKey,
   isValidTimeValue,
   normalizeReservationWindow,
   ReservationPolicySettings,
+  ReservationRequestZone,
   ReservationSource,
   ReservationStatus,
-  ReservationZone,
-  TABLE_MAP,
-  ZONE_CAPACITY
+  ReservationZone
 } from '../config/reservation-policy';
 import { OperationalBlockModel } from '../models/operational-block.model';
 import { ReservationModel } from '../models/reservation.model';
@@ -41,7 +41,7 @@ type ReservationInput = {
   date: string;
   time: string;
   guests: number;
-  zone: ReservationZone;
+  zone: ReservationRequestZone;
   notes?: string;
   consentAccepted?: boolean;
 };
@@ -58,7 +58,6 @@ type BlockInput = {
   endTime: string;
   zone: ReservationZone;
   blockType: BlockType;
-  tableIds?: string[];
   active?: boolean;
 };
 
@@ -99,6 +98,27 @@ function normalizeOpeningHours(raw: unknown): ReservationPolicySettings['opening
   return normalized;
 }
 
+function normalizeZoneCapacities(raw: unknown): ReservationPolicySettings['zoneCapacities'] {
+  const base = DEFAULT_RESERVATION_SETTINGS.zoneCapacities;
+
+  if (!raw || typeof raw !== 'object') {
+    return base;
+  }
+
+  const source = raw as Partial<Record<ReservationZone, Partial<{ total: number; online: number }>>>;
+
+  return {
+    interior: {
+      total: Math.max(0, Number(source.interior?.total ?? base.interior.total)),
+      online: Math.max(0, Number(source.interior?.online ?? base.interior.online))
+    },
+    terrace: {
+      total: Math.max(0, Number(source.terrace?.total ?? base.terrace.total)),
+      online: Math.max(0, Number(source.terrace?.online ?? base.terrace.online))
+    }
+  };
+}
+
 export async function getReservationSettings() {
   const settings = await RestaurantSettingsModel.findOne({ key: 'default' }).lean();
 
@@ -113,6 +133,7 @@ export async function getReservationSettings() {
     bufferMinutes: settings.bufferMinutes ?? DEFAULT_RESERVATION_SETTINGS.bufferMinutes,
     maxGuestsPerReservation:
       settings.maxGuestsPerReservation ?? DEFAULT_RESERVATION_SETTINGS.maxGuestsPerReservation,
+    zoneCapacities: normalizeZoneCapacities(settings.zoneCapacities),
     openingHours: normalizeOpeningHours(settings.openingHours)
   } satisfies ReservationPolicySettings;
 }
@@ -124,6 +145,7 @@ export async function updateReservationSettings(input: Partial<ReservationPolicy
     ...current,
     ...input,
     slotIntervalMinutes: DEFAULT_RESERVATION_SETTINGS.slotIntervalMinutes,
+    zoneCapacities: input.zoneCapacities ? normalizeZoneCapacities(input.zoneCapacities) : current.zoneCapacities,
     openingHours: input.openingHours ? normalizeOpeningHours(input.openingHours) : current.openingHours
   };
 
@@ -170,6 +192,7 @@ function formatReservationDate(date: Date) {
 async function evaluateReservationInput(
   data: ReservationInput,
   settings: ReservationPolicySettings,
+  source: ReservationSource,
   excludeReservationId?: string
 ) {
   if (!isValidDateKey(data.date) || !isValidTimeValue(data.time, settings.slotIntervalMinutes)) {
@@ -186,34 +209,37 @@ async function evaluateReservationInput(
   }
 
   const [reservations, blocks] = await Promise.all([getReservationsForDate(data.date), getBlocksForDate(data.date)]);
-  const evaluation = evaluateAvailability({
-    date: data.date,
-    time: data.time,
-    guests: data.guests,
-    zone: data.zone,
-    reservations,
-    blocks,
-    settings,
-    excludeReservationId
-  });
+  const zoneEvaluations = getRequestedZones(data.zone).map((zone) => ({
+    zone,
+    evaluation: evaluateAvailability({
+      date: data.date,
+      time: data.time,
+      guests: data.guests,
+      zone,
+      source,
+      reservations,
+      blocks,
+      settings,
+      excludeReservationId
+    })
+  }));
+
+  const selected = zoneEvaluations.find((entry) => entry.evaluation.success) ?? zoneEvaluations[0];
 
   return {
     startAt,
     reservations,
     blocks,
-    evaluation
+    evaluation: selected.evaluation,
+    resolvedZone: selected.zone
   };
-}
-
-function formatTableCombination(tableIds: string[]) {
-  return tableIds.join(' + ');
 }
 
 async function createReservationRecord(data: ReservationInput, source: ReservationSource) {
   const settings = await getReservationSettings();
-  const { startAt, evaluation } = await evaluateReservationInput(data, settings);
+  const { startAt, evaluation, resolvedZone } = await evaluateReservationInput(data, settings, source);
 
-  if (!evaluation.success || !evaluation.assignment) {
+  if (!evaluation.success) {
     const suggestions = evaluation.suggestions;
 
     throw new ReservationError(
@@ -228,19 +254,16 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
     email: data.email ?? '',
     date: buildDateTime(data.date, '00:00'),
     startAt,
-    endAt: evaluation.assignment
-      ? new Date(startAt.getTime() + (settings.reservationDurationMinutes + settings.bufferMinutes) * 60000)
-      : startAt,
+    endAt: new Date(startAt.getTime() + (settings.reservationDurationMinutes + settings.bufferMinutes) * 60000),
     source,
     status: 'confirmed_auto',
     referenceCode: generateReservationReference(),
-    tableIds: evaluation.assignment.tableIds,
-    tableCombinationLabel: formatTableCombination(evaluation.assignment.tableIds),
+    zone: resolvedZone,
     consentAccepted: Boolean(data.consentAccepted)
   });
 
   let emailNotificationStatus: 'pending' | 'sent' | 'skipped' | 'failed' = reservation.email ? 'failed' : 'skipped';
-  let whatsappNotificationStatus: 'pending' | 'sent' | 'skipped' | 'failed' = reservation.phone ? 'failed' : 'skipped';
+  const whatsappNotificationStatus: 'pending' | 'sent' | 'skipped' | 'failed' = 'skipped';
 
   try {
     const notificationResult = await sendReservationNotifications({
@@ -251,18 +274,11 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
       time: reservation.time,
       guests: reservation.guests,
       zone: reservation.zone,
-      referenceCode: reservation.referenceCode,
-      tableIds: reservation.tableIds,
       statusLabel: getReservationStatusLabel(reservation.status)
     });
 
     emailNotificationStatus = reservation.email
       ? notificationResult.emailSent
-        ? 'sent'
-        : 'failed'
-      : 'skipped';
-    whatsappNotificationStatus = reservation.phone
-      ? notificationResult.whatsappSent
         ? 'sent'
         : 'failed'
       : 'skipped';
@@ -281,7 +297,7 @@ async function createReservationRecord(data: ReservationInput, source: Reservati
   };
 }
 
-export async function getReservationAvailability(date: string, guests: number, zone: ReservationZone) {
+export async function getReservationAvailability(date: string, guests: number, zone: ReservationRequestZone) {
   const settings = await getReservationSettings();
 
   if (!isValidDateKey(date)) {
@@ -292,29 +308,46 @@ export async function getReservationAvailability(date: string, guests: number, z
   const openingSlots = getOpeningSlots(date, settings);
 
   const slots = openingSlots
-    .map((time) => {
-      const evaluation = evaluateAvailability({
-        date,
-        time,
-        guests,
-        zone,
-        reservations,
-        blocks,
-        settings
-      });
+    .flatMap((time) =>
+      getRequestedZones(zone).map((candidateZone) => {
+        const evaluation = evaluateAvailability({
+          date,
+          time,
+          guests,
+          zone: candidateZone,
+          source: 'website',
+          reservations,
+          blocks,
+          settings
+        });
 
-      return evaluation.success
-        ? {
-            time,
-            zone,
-            tableIds: evaluation.assignment.tableIds,
-            seats: evaluation.assignment.seats
-          }
-        : null;
-    })
-    .filter((slot): slot is { time: string; zone: ReservationZone; tableIds: string[]; seats: number } => Boolean(slot));
+        return evaluation.success
+          ? {
+              time,
+              zone: candidateZone,
+              remainingCapacity: evaluation.remainingCapacity
+            }
+          : null;
+      })
+    )
+    .filter((slot): slot is { time: string; zone: ReservationZone; remainingCapacity: number } => Boolean(slot))
+    .reduce<Array<{ time: string; zone: ReservationZone; remainingCapacity: number }>>((accumulator, slot) => {
+      const existing = accumulator.find((item) => item.time === slot.time);
 
-  const suggestions = getClosestSuggestions(date, guests, zone, reservations, blocks, settings);
+      if (!existing) {
+        accumulator.push(slot);
+        return accumulator;
+      }
+
+      if (slot.remainingCapacity > existing.remainingCapacity) {
+        existing.zone = slot.zone;
+        existing.remainingCapacity = slot.remainingCapacity;
+      }
+
+      return accumulator;
+    }, []);
+
+  const suggestions = getClosestSuggestions(date, guests, zone === 'either' ? 'interior' : zone, zone, reservations, blocks, settings);
 
   return {
     date,
@@ -331,6 +364,7 @@ function getClosestSuggestions(
   date: string,
   guests: number,
   zone: ReservationZone,
+  requestedZone: ReservationRequestZone,
   reservations: Awaited<ReturnType<typeof getReservationsForDate>>,
   blocks: Awaited<ReturnType<typeof getBlocksForDate>>,
   settings: ReservationPolicySettings
@@ -338,13 +372,19 @@ function getClosestSuggestions(
   const openingSlots = getOpeningSlots(date, settings);
   const collected: AvailabilitySuggestion[] = [];
 
-  for (const candidateZone of [zone, zone === 'interior' ? 'terrace' : 'interior'] as ReservationZone[]) {
+  const orderedZones =
+    requestedZone === 'either'
+      ? (['interior', 'terrace'] as ReservationZone[])
+      : ([zone, zone === 'interior' ? 'terrace' : 'interior'] as ReservationZone[]);
+
+  for (const candidateZone of orderedZones) {
     for (const time of openingSlots) {
       const evaluation = evaluateAvailability({
         date,
         time,
         guests,
         zone: candidateZone,
+        source: 'website',
         reservations,
         blocks,
         settings
@@ -432,9 +472,9 @@ export async function updateReservation(id: string, patch: ReservationPatchInput
   };
 
   const settings = await getReservationSettings();
-  const { startAt, evaluation } = await evaluateReservationInput(nextData, settings, reservation.id);
+  const { startAt, evaluation, resolvedZone } = await evaluateReservationInput(nextData, settings, reservation.source, reservation.id);
 
-  if (!evaluation.success || !evaluation.assignment) {
+  if (!evaluation.success) {
     throw new ReservationError(
       evaluation.suggestions.length > 0 ? buildAlternativeMessage(evaluation.suggestions) : buildRejectionMessage(),
       evaluation.suggestions.length > 0 ? 409 : 422,
@@ -450,10 +490,8 @@ export async function updateReservation(id: string, patch: ReservationPatchInput
   reservation.endAt = new Date(startAt.getTime() + (settings.reservationDurationMinutes + settings.bufferMinutes) * 60000);
   reservation.time = nextData.time;
   reservation.guests = nextData.guests;
-  reservation.zone = nextData.zone;
+  reservation.zone = resolvedZone;
   reservation.notes = nextData.notes ?? '';
-  reservation.tableIds = evaluation.assignment.tableIds;
-  reservation.tableCombinationLabel = formatTableCombination(evaluation.assignment.tableIds);
   if (patch.status) {
     reservation.status = patch.status;
   }
@@ -496,10 +534,6 @@ export async function createOperationalBlock(input: BlockInput) {
     throw new ReservationError('O bloqueio deve terminar depois da hora de início.', 400);
   }
 
-  if (input.blockType === 'table' && (!input.tableIds || input.tableIds.length === 0)) {
-    throw new ReservationError('Seleciona pelo menos uma mesa para bloquear.', 400);
-  }
-
   return OperationalBlockModel.create({
     label: input.label,
     reason: input.reason ?? '',
@@ -507,8 +541,7 @@ export async function createOperationalBlock(input: BlockInput) {
     startAt,
     endAt,
     zone: input.zone,
-    blockType: input.blockType,
-    tableIds: input.blockType === 'zone' ? [] : input.tableIds ?? [],
+    blockType: 'zone',
     active: input.active ?? true
   });
 }
@@ -526,7 +559,7 @@ export async function deleteOperationalBlock(id: string) {
 export async function getReservationDashboardSummary(date: string, zone?: ReservationZone, time = '12:00') {
   const settings = await getReservationSettings();
   const dayStart = buildDateTime(date, '00:00');
-  const referenceTime = isValidTimeValue(time, settings.slotIntervalMinutes) ? time : '12:00';
+  const referenceTime = isValidClockTime(time) ? time : '12:00';
   const referenceAt = buildDateTime(date, referenceTime);
   const weekEnd = new Date(dayStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
@@ -562,37 +595,27 @@ export async function getReservationDashboardSummary(date: string, zone?: Reserv
         currentZone,
         {
           guests,
-          capacity: ZONE_CAPACITY[currentZone],
-          occupancyRate: ZONE_CAPACITY[currentZone] === 0 ? 0 : Math.round((guests / ZONE_CAPACITY[currentZone]) * 100)
+          capacity: settings.zoneCapacities[currentZone].total,
+          onlineCapacity: settings.zoneCapacities[currentZone].online,
+          occupancyRate:
+            settings.zoneCapacities[currentZone].total === 0
+              ? 0
+              : Math.round((guests / settings.zoneCapacities[currentZone].total) * 100)
         }
       ];
     })
   );
 
-  const tableMap = TABLE_MAP.map((table) => {
-    const activeReservation = reservations.find((reservation) => {
-      if (reservation.zone !== table.zone || !BLOCKING_RESERVATION_STATUSES.includes(reservation.status)) return false;
-      const window = normalizeReservationWindow(reservation, settings);
-      return window ? window.tableIds.includes(table.id) && referenceAt >= window.startAt && referenceAt < window.endAt : false;
-    });
-
-    const activeBlock = blocks.find((block) => {
-      if (!block.active || block.zone !== table.zone) return false;
-      if (!(referenceAt >= new Date(block.startAt) && referenceAt < new Date(block.endAt))) return false;
-      if (block.blockType === 'zone') return true;
-      return (block.tableIds ?? []).includes(table.id);
-    });
-
-    return {
-      id: table.id,
-      zone: table.zone,
-      seats: table.seats,
-      neighbors: table.neighbors,
-      state: activeBlock ? 'blocked' : activeReservation ? 'occupied' : 'free',
-      reservationReference: activeReservation?.referenceCode ?? null,
-      reservationName: activeReservation?.fullName ?? null
-    };
-  });
+  const blockedZones = targetZones.reduce<Record<ReservationZone, boolean>>(
+    (accumulator, currentZone) => {
+      accumulator[currentZone] = blocks.some((block) => {
+        if (!block.active || block.zone !== currentZone) return false;
+        return referenceAt >= new Date(block.startAt) && referenceAt < new Date(block.endAt);
+      });
+      return accumulator;
+    },
+    { interior: false, terrace: false }
+  );
 
   return {
     settings,
@@ -600,7 +623,7 @@ export async function getReservationDashboardSummary(date: string, zone?: Reserv
     referenceTime,
     zone: zone ?? 'all',
     occupancyByZone,
-    tables: tableMap,
+    blockedZones,
     reservations,
     blocks,
     report: {

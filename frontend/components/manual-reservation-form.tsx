@@ -41,10 +41,8 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
   } = useForm<AdminReservationPayload>({
     resolver: zodResolver(adminReservationSchema),
     defaultValues: {
-      email: '',
       guests: 2,
-      zone: 'interior',
-      notes: ''
+      zone: 'interior'
     }
   });
 
@@ -117,12 +115,10 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
       reset({
         fullName: '',
         phone: '',
-        email: '',
         date: '',
         time: '',
         guests: 2,
-        zone: 'interior',
-        notes: ''
+        zone: 'interior'
       });
       setSlots([]);
       setSuggestions([]);
@@ -148,23 +144,18 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5">
         <div className="grid gap-5 md:grid-cols-2">
           <div>
-            <label className="mb-2 block text-sm text-mist/70">Nome completo</label>
-            <input className={inputStyles} {...register('fullName')} placeholder="Ex.: Joana Silva" />
+            <label className="mb-2 block text-sm text-mist/70">Nome</label>
+            <input className={inputStyles} {...register('fullName')} />
             {errors.fullName ? <p className="mt-2 text-xs text-rose-300">{errors.fullName.message}</p> : null}
           </div>
           <div>
             <label className="mb-2 block text-sm text-mist/70">Telefone</label>
-            <input className={inputStyles} {...register('phone')} placeholder="910 000 000" />
+            <input className={inputStyles} {...register('phone')} />
             {errors.phone ? <p className="mt-2 text-xs text-rose-300">{errors.phone.message}</p> : null}
           </div>
           <div>
-            <label className="mb-2 block text-sm text-mist/70">Email (opcional)</label>
-            <input className={inputStyles} {...register('email')} placeholder="nome@email.com" type="email" />
-            {errors.email ? <p className="mt-2 text-xs text-rose-300">{errors.email.message}</p> : null}
-          </div>
-          <div>
             <label className="mb-2 block text-sm text-mist/70">Número de pessoas</label>
-            <input className={inputStyles} {...register('guests', { valueAsNumber: true })} type="number" min={1} max={15} />
+            <input className={inputStyles} {...register('guests', { valueAsNumber: true })} type="number" min={1} max={30} />
             {errors.guests ? <p className="mt-2 text-xs text-rose-300">{errors.guests.message}</p> : null}
           </div>
           <div>
@@ -229,12 +220,6 @@ export function ManualReservationForm({ adminKey, onCreated, onError }: Props) {
             />
             {errors.time ? <p className="mt-2 text-xs text-rose-300">{errors.time.message}</p> : null}
           </div>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm text-mist/70">Observações</label>
-          <textarea className={`${inputStyles} min-h-28 resize-none`} {...register('notes')} placeholder="Pedidos especiais ou notas da chamada." />
-          {errors.notes ? <p className="mt-2 text-xs text-rose-300">{errors.notes.message}</p> : null}
         </div>
 
         <p className="text-sm leading-7 text-mist/65">

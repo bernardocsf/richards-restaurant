@@ -10,7 +10,7 @@ export function Footer() {
         <div>
           <p className="font-heading text-2xl text-ink">{restaurantInfo.name}</p>
           <p className="mt-4 max-w-sm text-sm leading-7 text-mist/68">
-            Experiência gastronómica premium em Lisboa, com grelha, cozinha portuguesa, peixe e secção sushi.
+            Experiência gastronómica cuidada em Lisboa, com grelha, cozinha portuguesa, peixe e secção sushi.
           </p>
         </div>
 

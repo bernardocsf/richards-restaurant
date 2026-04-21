@@ -71,7 +71,7 @@ export async function createReservation(req: Request, res: Response) {
     });
 
     return res.status(201).json({
-      message: 'Reserva confirmada com sucesso. Enviámos confirmação imediata por email e WhatsApp sempre que configurados.',
+      message: 'Reserva confirmada com sucesso. Enviámos confirmação imediata por email sempre que configurado.',
       reservation: result.reservation,
       suggestions: result.suggestions
     });

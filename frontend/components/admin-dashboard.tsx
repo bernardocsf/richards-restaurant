@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import {
   deleteReview,
@@ -16,7 +16,6 @@ import {
 } from '@/lib/api';
 import { ManualReservationForm } from '@/components/manual-reservation-form';
 import { ReservationDatePicker } from '@/components/reservation-date-picker';
-import { ReservationTimePicker } from '@/components/reservation-time-picker';
 import { formatDate } from '@/lib/utils';
 import { StarRating } from '@/components/star-rating';
 
@@ -49,14 +48,45 @@ function todayKey() {
   return `${year}-${month}-${day}`;
 }
 
+function currentClockTime() {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 function formatClock(value: string) {
   return value.slice(0, 5);
+}
+
+function formatOccupancyLabel(guests: number, capacity: number) {
+  return `${guests} / ${capacity} lugares ocupados`;
+}
+
+type ServicePeriod = 'lunch' | 'dinner';
+
+const serviceLabels: Record<ServicePeriod, string> = {
+  lunch: 'Almoço',
+  dinner: 'Jantar'
+};
+
+function getServicePeriod(time: string): ServicePeriod {
+  return time < '18:00' ? 'lunch' : 'dinner';
+}
+
+function getReferenceTime(period: ServicePeriod) {
+  return period === 'lunch' ? '13:00' : '20:00';
+}
+
+function getDashboardReferenceTime(date: string, period: ServicePeriod, liveClock: string) {
+  if (date !== todayKey()) return getReferenceTime(period);
+  return getServicePeriod(liveClock) === period ? liveClock : getReferenceTime(period);
 }
 
 const halfHourOptions = Array.from({ length: 48 }, (_value, index) => {
   const hours = String(Math.floor(index / 2)).padStart(2, '0');
   const minutes = index % 2 === 0 ? '00' : '30';
-  return { time: `${hours}:${minutes}` };
+  return `${hours}:${minutes}`;
 });
 
 export function AdminDashboard() {
@@ -69,22 +99,52 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayKey());
-  const [selectedTime, setSelectedTime] = useState('12:00');
+  const [selectedPeriod, setSelectedPeriod] = useState<ServicePeriod>('lunch');
   const [selectedZone, setSelectedZone] = useState<ReservationZone | 'all'>('all');
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ReservationStatus | 'all'>('all');
+  const [liveClock, setLiveClock] = useState(currentClockTime());
+
+  const referenceTime = useMemo(
+    () => getDashboardReferenceTime(selectedDate, selectedPeriod, liveClock),
+    [liveClock, selectedDate, selectedPeriod]
+  );
+
+  const filteredReservations = useMemo(
+    () =>
+      reservations
+        .filter((reservation) => getServicePeriod(reservation.time) === selectedPeriod)
+        .sort((left, right) => left.startAt.localeCompare(right.startAt)),
+    [reservations, selectedPeriod]
+  );
 
   const reservationsByZone = useMemo(
     () => ({
-      interior: reservations
+      interior: filteredReservations
         .filter((reservation) => reservation.zone === 'interior')
         .sort((left, right) => left.startAt.localeCompare(right.startAt)),
-      terrace: reservations
+      terrace: filteredReservations
         .filter((reservation) => reservation.zone === 'terrace')
         .sort((left, right) => left.startAt.localeCompare(right.startAt))
     }),
-    [reservations]
+    [filteredReservations]
   );
+
+  const loadDashboard = async (key: string, options?: { quiet?: boolean }) => {
+    if (!options?.quiet) {
+      setLoading(true);
+    }
+    setError(null);
+
+    try {
+      const dashboardResponse = await fetchDashboardSummary(key, selectedDate, selectedZone, referenceTime);
+      setDashboard(dashboardResponse);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível atualizar o estado operacional.');
+    } finally {
+      if (!options?.quiet) {
+        setLoading(false);
+      }
+    }
+  };
 
   const loadData = async (key: string) => {
     setLoading(true);
@@ -94,12 +154,10 @@ export function AdminDashboard() {
       const [reservationResponse, reviewResponse, dashboardResponse] = await Promise.all([
         fetchAdminReservations(key, {
           date: selectedDate,
-          zone: selectedZone,
-          search,
-          status: statusFilter
+          zone: selectedZone
         }),
         fetchReviews(),
-        fetchDashboardSummary(key, selectedDate, selectedZone, selectedTime)
+        fetchDashboardSummary(key, selectedDate, selectedZone, referenceTime)
       ]);
 
       setReservations(reservationResponse.reservations);
@@ -119,6 +177,23 @@ export function AdminDashboard() {
     if (!adminKey) return;
     await loadData(adminKey);
   };
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setLiveClock(currentClockTime());
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    setLiveClock(currentClockTime());
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (!logged || !adminKey) return;
+    void loadDashboard(adminKey, { quiet: true });
+  }, [adminKey, logged, referenceTime]);
 
   const handleStatusUpdate = async (id: string, status: ReservationStatus) => {
     try {
@@ -192,14 +267,27 @@ export function AdminDashboard() {
       {logged ? (
         <>
           <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-[1.1fr_1.2fr_1fr_auto]">
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Dia</label>
                 <ReservationDatePicker value={selectedDate} onChange={setSelectedDate} />
               </div>
               <div>
-                <label className="mb-2 block text-sm text-mist/70">Hora no mapa</label>
-                <ReservationTimePicker value={selectedTime} options={halfHourOptions} onChange={setSelectedTime} />
+                <label className="mb-2 block text-sm text-mist/70">Serviço</label>
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#151819] p-1">
+                  {(['lunch', 'dinner'] as ServicePeriod[]).map((period) => (
+                    <button
+                      key={period}
+                      type="button"
+                      onClick={() => setSelectedPeriod(period)}
+                      className={`rounded-[1rem] px-4 py-3 text-sm font-medium transition ${
+                        selectedPeriod === period ? 'bg-champagne text-canvas' : 'text-mist/70 hover:text-ink'
+                      }`}
+                    >
+                      {serviceLabels[period]}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="mb-2 block text-sm text-mist/70">Zona</label>
@@ -215,33 +303,6 @@ export function AdminDashboard() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
                 </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm text-mist/70">Estado</label>
-                <div className="relative">
-                  <select
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value as ReservationStatus | 'all')}
-                    className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 pr-12 text-sm text-ink outline-none"
-                  >
-                    <option value="all">Todos</option>
-                    {Object.entries(statusLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm text-mist/70">Pesquisa</label>
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Nome, telefone ou referência"
-                  className="w-full rounded-2xl border border-white/10 bg-[#151819] px-4 py-3 text-sm text-ink outline-none"
-                />
               </div>
               <div className="flex items-end">
                 <button
@@ -260,15 +321,15 @@ export function AdminDashboard() {
               <div>
                 <h2 className="font-heading text-3xl text-ink">Reservas do dia</h2>
                 <p className="mt-2 text-sm text-mist/65">
-                  Interior: {reservationsByZone.interior.length} reservas • Esplanada: {reservationsByZone.terrace.length} reservas
+                  {serviceLabels[selectedPeriod]} • Interior: {reservationsByZone.interior.length} reservas • Esplanada: {reservationsByZone.terrace.length} reservas
                 </p>
               </div>
-              <div className="text-sm text-mist/65">
-                Mapa às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}
+                <div className="text-sm text-mist/65">
+                Mapa às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(referenceTime)}
               </div>
             </div>
             <div className="mt-6 space-y-4">
-              {reservations.map((reservation) => (
+              {filteredReservations.map((reservation) => (
                 <article key={reservation._id} className="rounded-[1.5rem] border border-white/8 bg-[#151819] p-5">
                   <div className="flex flex-col gap-5">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -279,21 +340,17 @@ export function AdminDashboard() {
                         </p>
                         <p className="text-sm text-mist/55">
                           {reservation.phone}
-                          {reservation.email ? ` • ${reservation.email}` : ' • sem email'}
+                          {reservation.email ? ` • ${reservation.email}` : ''}
                         </p>
                         <p className="mt-2 text-sm text-mist/65">
-                          Ref.: {reservation.referenceCode} • Origem: {reservation.source === 'phone' ? 'telefone' : 'website'}
+                          Origem: {reservation.source === 'phone' ? 'telefone' : 'website'}
                         </p>
-                        <p className="mt-2 text-sm text-mist/65">Mesas: {reservation.tableIds.join(', ') || 'por atribuir'}</p>
                         {reservation.notes ? <p className="mt-2 text-sm text-mist/65">Notas: {reservation.notes}</p> : null}
                       </div>
                       <div className="flex flex-col items-start gap-3 lg:items-end">
                         <span className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs uppercase tracking-[0.22em] text-champagne">
                           {statusLabels[reservation.status]}
                         </span>
-                        <p className="text-xs text-mist/55">
-                          Email: {reservation.emailNotificationStatus ?? 'n/d'} • WhatsApp: {reservation.whatsappNotificationStatus ?? 'n/d'}
-                        </p>
                         <div className="flex flex-wrap gap-2">
                           {(Object.keys(statusLabels) as ReservationStatus[]).map((status) => (
                             <button
@@ -321,17 +378,26 @@ export function AdminDashboard() {
                         }
                         className="bg-[#0f1212]"
                       />
-                      <ReservationTimePicker
-                        value={reservation.time}
-                        options={halfHourOptions}
-                        onChange={(nextValue) =>
-                          setReservations((current) =>
-                            current.map((item) =>
-                              item._id === reservation._id ? { ...item, time: nextValue } : item
+                      <div className="relative">
+                        <select
+                          value={reservation.time}
+                          onChange={(event) =>
+                            setReservations((current) =>
+                              current.map((item) =>
+                                item._id === reservation._id ? { ...item, time: event.target.value } : item
+                              )
                             )
-                          )
-                        }
-                      />
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-[#0f1212] px-4 py-3 pr-12 text-sm text-ink outline-none"
+                        >
+                          {halfHourOptions.map((time) => (
+                            <option key={time} value={time}>
+                              {time}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-champagne" />
+                      </div>
                       <div className="relative">
                         <select
                           value={reservation.zone}
@@ -361,7 +427,7 @@ export function AdminDashboard() {
                 </article>
               ))}
 
-              {reservations.length === 0 ? <p className="text-sm text-mist/65">Sem reservas para os filtros selecionados.</p> : null}
+              {filteredReservations.length === 0 ? <p className="text-sm text-mist/65">Sem reservas para os filtros selecionados.</p> : null}
             </div>
           </section>
 
@@ -369,55 +435,51 @@ export function AdminDashboard() {
             <section className="rounded-[2rem] border border-borderSoft bg-white/[0.04] p-6 shadow-soft">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.2em] text-champagne">Mapa operacional</p>
-                  <h2 className="mt-2 font-heading text-3xl text-ink">Mesas por zona</h2>
+                  <p className="text-sm uppercase tracking-[0.2em] text-champagne">Lotação operacional</p>
+                  <h2 className="mt-2 font-heading text-3xl text-ink">Capacidade por zona</h2>
                 </div>
                 <div className="text-right text-sm text-mist/65">
                   <p>{dashboard?.report.day ?? 0} pessoas marcadas neste dia</p>
-                  <p>Estado real às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(selectedTime)}</p>
+                  <p>Estado real no {serviceLabels[selectedPeriod].toLowerCase()} às {dashboard?.referenceTime ? formatClock(dashboard.referenceTime) : formatClock(referenceTime)}</p>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-6">
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
                 {(['interior', 'terrace'] as ReservationZone[]).map((zone) => (
-                  <div key={zone}>
-                    <div className="flex items-center justify-between">
+                  <article
+                    key={zone}
+                    className={`rounded-[1.5rem] border p-5 ${
+                      dashboard?.blockedZones?.[zone]
+                        ? 'border-rose-300/25 bg-rose-400/10'
+                        : 'border-white/10 bg-[#151819]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
                       <h3 className="font-heading text-2xl text-ink">{zoneLabels[zone]}</h3>
-                      <p className="text-sm text-mist/65">
-                        {dashboard?.occupancyByZone?.[zone]?.guests ?? 0} / {dashboard?.occupancyByZone?.[zone]?.capacity ?? 0} lugares ocupados
-                      </p>
+                      <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs uppercase tracking-[0.18em] text-champagne">
+                        {dashboard?.blockedZones?.[zone] ? 'Bloqueada' : 'Disponível'}
+                      </span>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {dashboard?.tables
-                        .filter((table) => table.zone === zone)
-                        .map((table) => (
-                          <div
-                            key={table.id}
-                            className={`rounded-[1.25rem] border px-4 py-4 ${
-                              table.state === 'occupied'
-                                ? 'border-amber-300/30 bg-amber-400/10'
-                                : table.state === 'blocked'
-                                  ? 'border-rose-300/30 bg-rose-400/10'
-                                  : 'border-emerald-300/30 bg-emerald-400/10'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <p className="font-semibold text-ink">{table.id}</p>
-                              <span className="text-xs uppercase tracking-[0.18em] text-mist/70">{table.seats} lugares</span>
-                            </div>
-                            <p className="mt-2 text-sm text-mist/70">
-                              {table.state === 'free' ? 'Livre' : table.state === 'occupied' ? 'Ocupada' : 'Bloqueada'}
-                            </p>
-                            {table.reservationReference ? (
-                              <p className="mt-2 text-xs text-mist/65">
-                                {table.reservationReference}
-                                {table.reservationName ? ` · ${table.reservationName}` : ''}
-                              </p>
-                            ) : null}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                    <p className="mt-4 text-sm text-mist/65">
+                      {formatOccupancyLabel(
+                        dashboard?.occupancyByZone?.[zone]?.guests ?? 0,
+                        dashboard?.occupancyByZone?.[zone]?.capacity ?? 0
+                      )}
+                    </p>
+                    <p className="mt-2 text-sm text-mist/65">
+                      Capacidade online: {dashboard?.occupancyByZone?.[zone]?.onlineCapacity ?? 0} lugares
+                    </p>
+                    <p className="mt-2 text-sm text-mist/65">
+                      Capacidade livre: {Math.max(
+                        0,
+                        (dashboard?.occupancyByZone?.[zone]?.capacity ?? 0) - (dashboard?.occupancyByZone?.[zone]?.guests ?? 0)
+                      )}{' '}
+                      lugares
+                    </p>
+                    <p className="mt-2 text-sm text-mist/65">
+                      Ocupação: {dashboard?.occupancyByZone?.[zone]?.occupancyRate ?? 0}%
+                    </p>
+                  </article>
                 ))}
               </div>
             </section>

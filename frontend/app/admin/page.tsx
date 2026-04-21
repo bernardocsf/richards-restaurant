@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AnimatedSection } from '@/components/animated-section';
-import { PageHero } from '@/components/page-hero';
 
 export const metadata: Metadata = {
   title: 'Admin',
@@ -15,14 +14,7 @@ export const metadata: Metadata = {
 
 export default function AdminPage() {
   return (
-    <div className="space-y-12 pb-8">
-      <PageHero
-        badge="Área admin"
-        title="Painel protegido para gerir reservas, reviews e sinais operacionais."
-        description="Visual limpo, foco em produtividade e integração direta com o backend Express e MongoDB Atlas."
-        image="/images/dining-room.jpg"
-      />
-
+    <div className="pb-8">
       <AnimatedSection>
         <AdminDashboard />
       </AnimatedSection>

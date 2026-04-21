@@ -24,11 +24,6 @@ const reservationSchema = new Schema(
       enum: ['website', 'phone', 'walk_in'] satisfies ReservationSource[],
       default: 'website'
     },
-    tableIds: {
-      type: [String],
-      default: []
-    },
-    tableCombinationLabel: { type: String, default: '' },
     status: {
       type: String,
       enum: [

@@ -9,6 +9,7 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000/api';
 
 export type ReservationZone = 'interior' | 'terrace';
+export type ReservationRequestZone = ReservationZone | 'either';
 export type ReservationStatus =
   | 'confirmed_auto'
   | 'cancelled_by_customer'
@@ -37,8 +38,6 @@ export type ReservationRecord = {
   zone: ReservationZone;
   notes?: string;
   source: 'website' | 'phone' | 'walk_in';
-  tableIds: string[];
-  tableCombinationLabel?: string;
   status: ReservationStatus;
   emailNotificationStatus?: 'pending' | 'sent' | 'skipped' | 'failed';
   whatsappNotificationStatus?: 'pending' | 'sent' | 'skipped' | 'failed';
@@ -54,8 +53,7 @@ export type OperationalBlockRecord = {
   startAt: string;
   endAt: string;
   zone: ReservationZone;
-  blockType: 'table' | 'zone';
-  tableIds?: string[];
+  blockType: 'zone';
   active: boolean;
 };
 
@@ -64,6 +62,7 @@ export type ReservationSettings = {
   reservationDurationMinutes: number;
   bufferMinutes: number;
   maxGuestsPerReservation: number;
+  zoneCapacities: Record<ReservationZone, { total: number; online: number }>;
   openingHours: Record<string, Array<{ start: string; end: string }>>;
 };
 
@@ -72,16 +71,8 @@ export type DashboardSummary = {
   date: string;
   referenceTime: string;
   zone: ReservationZone | 'all';
-  occupancyByZone: Record<string, { guests: number; capacity: number; occupancyRate: number }>;
-  tables: Array<{
-    id: string;
-    zone: ReservationZone;
-    seats: number;
-    neighbors: string[];
-    state: 'free' | 'occupied' | 'blocked';
-    reservationReference: string | null;
-    reservationName: string | null;
-  }>;
+  occupancyByZone: Record<string, { guests: number; capacity: number; onlineCapacity: number; occupancyRate: number }>;
+  blockedZones: Record<string, boolean>;
   reservations: ReservationRecord[];
   blocks: OperationalBlockRecord[];
   report: {
@@ -128,7 +119,7 @@ export async function createManualReservation(payload: AdminReservationPayload, 
   return handleResponse<{ message: string; reservation?: ReservationRecord; suggestions?: AvailabilitySuggestion[] }>(response);
 }
 
-export async function fetchReservationAvailability(date: string, guests: number, zone: ReservationZone) {
+export async function fetchReservationAvailability(date: string, guests: number, zone: ReservationRequestZone) {
   const response = await fetch(
     `${API_BASE_URL}/reservations/availability?date=${encodeURIComponent(date)}&guests=${encodeURIComponent(guests)}&zone=${encodeURIComponent(zone)}`,
     {
@@ -139,8 +130,8 @@ export async function fetchReservationAvailability(date: string, guests: number,
   return handleResponse<{
     date: string;
     guests: number;
-    zone: ReservationZone;
-    slots: Array<{ time: string; zone: ReservationZone; tableIds: string[]; seats: number }>;
+    zone: ReservationRequestZone;
+    slots: Array<{ time: string; zone: ReservationZone; remainingCapacity: number }>;
     suggestions: AvailabilitySuggestion[];
     durationMinutes: number;
     bufferMinutes: number;
