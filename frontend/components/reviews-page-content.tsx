@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatedSection } from '@/components/animated-section';
 import { ReviewForm } from '@/components/review-form';
 import { ReviewList } from '@/components/review-list';
+import { ReviewScoreCard } from '@/components/review-score-card';
 
 export function ReviewsPageContent() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -14,8 +15,16 @@ export function ReviewsPageContent() {
         <div className="py-2 sm:py-4 xl:sticky xl:top-28 xl:self-start">
           <span className="text-xs uppercase tracking-[0.3em] text-champagne">Submeter review</span>
           <h2 className="mt-4 font-heading text-4xl text-ink">Partilha a tua experiência.</h2>
+          <div className="hidden xl:block">
+            <ReviewScoreCard />
+          </div>
         </div>
-        <ReviewForm onSubmitted={() => setRefreshKey((current) => current + 1)} />
+        <div>
+          <div className="xl:hidden">
+            <ReviewScoreCard />
+          </div>
+          <ReviewForm onSubmitted={() => setRefreshKey((current) => current + 1)} />
+        </div>
       </AnimatedSection>
 
       <AnimatedSection>

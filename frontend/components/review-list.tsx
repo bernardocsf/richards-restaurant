@@ -51,24 +51,6 @@ export function ReviewList({ refreshKey = 0 }: ReviewListProps) {
     };
   }, [refreshKey]);
 
-  const metrics = useMemo(() => {
-    if (!reviews.length) {
-      return {
-        rating: 0,
-        total: 0
-      };
-    }
-
-    const ratingSum = reviews.reduce((sum, review) => sum + review.rating, 0);
-    const total = reviews.length;
-    const average = ratingSum / total;
-
-    return {
-      rating: Number(average.toFixed(1)),
-      total
-    };
-  }, [reviews]);
-
   const toggleReview = (id: string) => {
     setExpandedReviews((current) => ({
       ...current,
@@ -81,41 +63,6 @@ export function ReviewList({ refreshKey = 0 }: ReviewListProps) {
 
   return (
     <div className="space-y-8">
-      <div className="grid gap-5 lg:grid-cols-[0.72fr_1.28fr]">
-        <div className="rounded-[28px] border border-borderSoft bg-[rgba(84,121,31,0.08)] p-6 sm:p-7">
-          <p className="text-sm uppercase tracking-[0.28em] text-champagne">Pontuação pública</p>
-          <div className="mt-5 flex items-end gap-4">
-            <span className="font-heading text-6xl text-ink">{metrics.total ? metrics.rating.toFixed(1) : '0.0'}</span>
-            <div className="pb-2">
-              <StarRating rating={metrics.rating} className="scale-110" />
-              <p className="mt-3 text-sm text-mist/70">{metrics.total} reviews escritas no site.</p>
-            </div>
-          </div>
-          <p className="mt-5 text-sm leading-7 text-mist/70">
-            Todas as reviews submetidas no site ficam visíveis de forma imediata para refletir a experiência real dos clientes.
-          </p>
-        </div>
-
-        <div className="flex items-end justify-between gap-4 rounded-[28px] border border-borderSoft bg-[rgba(255,255,255,0.02)] p-6 sm:p-7">
-          <div>
-            <p className="text-sm uppercase tracking-[0.28em] text-champagne">Leitura rápida</p>
-            <h2 className="mt-4 font-heading text-3xl text-ink sm:text-4xl">Reviews recentes do site.</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-mist/70">
-              A lista abre com um conjunto mais curto para navegação confortável. Se quiseres, podes carregar mais reviews logo abaixo.
-            </p>
-          </div>
-          {metrics.total ? (
-            <div className="hidden text-right sm:block">
-              <p className="text-xs uppercase tracking-[0.24em] text-mist/52">A mostrar</p>
-              <p className="mt-2 font-heading text-3xl text-ink">
-                {Math.min(visibleCount, metrics.total)}
-                <span className="ml-2 text-base text-mist/54">de {metrics.total}</span>
-              </p>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
       <div className="border-t border-borderSoft pt-6">
         <div className="space-y-4">
           {loading ? (
