@@ -20,7 +20,7 @@ import { connectDatabase } from './config/database';
 import { env } from './config/env';
 
 async function bootstrap() {
-  await connectDatabase();
+  await connectDatabase(env.mongoUri);
 
   app.listen(env.port, '0.0.0.0', () => {
     console.log(`🚀 API running on port ${env.port}`);

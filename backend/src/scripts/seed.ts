@@ -1,9 +1,10 @@
+import { env } from '../config/env';
 import { connectDatabase } from '../config/database';
 import { ReservationModel } from '../models/reservation.model';
 import { ReviewModel } from '../models/review.model';
 
 async function seed() {
-  await connectDatabase();
+  await connectDatabase(env.mongoUri);
 
   await ReservationModel.deleteMany({});
   await ReviewModel.deleteMany({});
