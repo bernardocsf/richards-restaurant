@@ -62,7 +62,7 @@ export default function HomePage() {
                 }
               }
             }}
-            className="mt-8 grid gap-4 sm:grid-cols-2"
+            className="mt-8 hidden gap-4 sm:grid sm:grid-cols-2"
           >
             {[
               { label: 'Ambiente', value: 'Calmo e acolhedor' },
