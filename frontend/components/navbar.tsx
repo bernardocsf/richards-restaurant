@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 const baseLinks = [
   { href: '/menu', label: 'Menu' },
   { href: '/reviews', label: 'Reviews' },
-  { href: '/contact', label: 'Contactos' }
+  { href: '/directions', label: 'Direções' }
 ];
 
 export function Navbar() {
@@ -23,16 +23,47 @@ export function Navbar() {
   const isHome = pathname === '/';
   const menuLinks = isHome ? baseLinks : [{ href: '/', label: 'Home' }, ...baseLinks];
   const mobileMenuLinks = isHome
-    ? [{ href: '/reservations', label: 'Reservar mesa' }, ...baseLinks]
+    ? [...baseLinks]
     : [
         { href: '/', label: 'Home' },
-        { href: '/reservations', label: 'Reservar mesa' },
         ...baseLinks
       ];
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted || !open) return;
+
+    const scrollY = window.scrollY;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalHtmlTouchAction = document.documentElement.style.touchAction;
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const originalWidth = document.body.style.width;
+    const originalTouchAction = document.body.style.touchAction;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.touchAction = 'none';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.documentElement.style.touchAction = originalHtmlTouchAction;
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.width = originalWidth;
+      document.body.style.touchAction = originalTouchAction;
+      window.scrollTo(0, scrollY);
+    };
+  }, [mounted, open]);
 
   return (
     <header

@@ -1,10 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchReviews } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { SectionHeading } from '@/components/section-heading';
 import { StarRating } from '@/components/star-rating';
 
 type Review = {
@@ -75,76 +77,94 @@ export function HomeReviewPreview() {
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
-      <div className="py-2 sm:py-4">
-        <span className="text-xs uppercase tracking-[0.3em] text-champagne">Reviews</span>
-        <div className="mt-5 flex items-end gap-4">
-          <span className="font-heading text-6xl text-ink">{metrics.total ? metrics.rating.toFixed(1) : '0.0'}</span>
-          <div className="pb-1">
-            <StarRating rating={metrics.rating} className="scale-110" />
-            <p className="mt-3 text-sm text-mist/70">{metrics.total} reviews e feedback contínuo no site.</p>
-          </div>
-        </div>
-        <p className="mt-5 text-sm leading-7 text-mist/72">
-          As opiniões mostradas aqui são escritas diretamente pelos clientes.
-        </p>
-        <Link href="/reviews" className="button-primary mt-7">
-          Ver todas as reviews
-        </Link>
-      </div>
+    <div className="space-y-8">
+      <SectionHeading
+        eyebrow="Reviews"
+        title="Feedback recente escrito diretamente pelos clientes."
+        description="Uma leitura rápida da experiência no restaurante, com opiniões reais submetidas no site e acesso à coleção completa."
+        action={
+          <Link href="/reviews" className="button-primary inline-flex items-center gap-2">
+            Ver todas as reviews
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        }
+      />
 
-      <div className="border-t border-borderSoft pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="border-b border-borderSoft pb-6">
-              <div className="h-6 w-24 rounded bg-[rgba(108,158,42,0.2)]" />
-              <div className="mt-4 h-20 rounded bg-[rgba(89,128,32,0.12)]" />
+      <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        <motion.div
+          initial={{ opacity: 0, x: -24 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-[2rem] border border-borderSoft bg-[linear-gradient(180deg,rgba(84,121,31,0.12),rgba(84,121,31,0.05))] p-6 shadow-soft sm:p-7"
+        >
+          <p className="text-xs uppercase tracking-[0.28em] text-champagne">Pontuação pública</p>
+          <div className="mt-6 flex items-end gap-4">
+            <span className="font-heading text-6xl text-ink">{metrics.total ? metrics.rating.toFixed(1) : '0.0'}</span>
+            <div className="pb-1">
+              <StarRating rating={metrics.rating} className="scale-110" />
+              <p className="mt-3 text-sm text-mist/70">{metrics.total} reviews escritas no site.</p>
             </div>
-          ))
-        ) : error ? (
-          <div className="border border-rose-300/20 bg-rose-400/10 p-6 text-sm text-rose-100 md:col-span-3">
-            {error}
           </div>
-        ) : reviews.length === 0 ? (
-          <div className="border border-borderSoft bg-[rgba(84,121,31,0.1)] p-6 text-sm text-mist/72 md:col-span-2 xl:col-span-3">
-            Ainda não existem reviews escritas no site.
-          </div>
-        ) : (
-          displayedReviews.map((review, index) => (
-            <motion.article
-              key={review._id}
-              initial={{ opacity: 0, y: 22 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.65, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -4 }}
-              className="border-b border-white/8 pb-6 last:border-b-0 last:pb-0"
-            >
-              <div>
-                <p className="font-heading text-2xl text-ink">{review.customerName}</p>
-                <div className="mt-4">
-                  <StarRating rating={review.rating} />
-                </div>
-                <p className="mt-4 text-sm text-mist/55">{formatDate(review.createdAt)}</p>
+          <p className="mt-6 max-w-md text-sm leading-7 text-mist/72">
+            Uma secção pensada para dar prova social imediata sem perder o lado editorial da homepage.
+          </p>
+        </motion.div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-[1.75rem] border border-borderSoft bg-[rgba(255,255,255,0.03)] p-5 shadow-soft"
+              >
+                <div className="h-6 w-24 rounded bg-[rgba(108,158,42,0.2)]" />
+                <div className="mt-4 h-20 rounded bg-[rgba(89,128,32,0.12)]" />
               </div>
-              <p className="mt-4 text-sm leading-7 text-mist/74">
-                {review.comment.length > 220 && !expandedReviews[review._id]
-                  ? `${review.comment.slice(0, 220)}...`
-                  : review.comment}
-              </p>
-              {review.comment.length > 220 ? (
-                <button
-                  type="button"
-                  onClick={() => toggleReview(review._id)}
-                  className="mt-2 text-sm font-semibold text-champagne transition hover:text-ink"
-                >
-                  {expandedReviews[review._id] ? 'Ver menos' : 'Ver mais'}
-                </button>
-              ) : null}
-            </motion.article>
-          ))
-        )}
+            ))
+          ) : error ? (
+            <div className="rounded-[1.75rem] border border-rose-300/20 bg-rose-400/10 p-6 text-sm text-rose-100 md:col-span-2 xl:col-span-3">
+              {error}
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="rounded-[1.75rem] border border-borderSoft bg-[rgba(84,121,31,0.1)] p-6 text-sm text-mist/72 md:col-span-2 xl:col-span-3">
+              Ainda não existem reviews escritas no site.
+            </div>
+          ) : (
+            displayedReviews.map((review, index) => (
+              <motion.article
+                key={review._id}
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.65, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ y: -4 }}
+                className="rounded-[1.75rem] border border-borderSoft bg-[rgba(255,255,255,0.03)] p-5 shadow-soft"
+              >
+                <div>
+                  <p className="font-heading text-2xl text-ink">{review.customerName}</p>
+                  <div className="mt-4">
+                    <StarRating rating={review.rating} />
+                  </div>
+                  <p className="mt-4 text-sm text-mist/55">{formatDate(review.createdAt)}</p>
+                </div>
+                <p className="mt-4 text-sm leading-7 text-mist/74">
+                  {review.comment.length > 220 && !expandedReviews[review._id]
+                    ? `${review.comment.slice(0, 220)}...`
+                    : review.comment}
+                </p>
+                {review.comment.length > 220 ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleReview(review._id)}
+                    className="mt-2 text-sm font-semibold text-champagne transition hover:text-ink"
+                  >
+                    {expandedReviews[review._id] ? 'Ver menos' : 'Ver mais'}
+                  </button>
+                ) : null}
+              </motion.article>
+            ))
+          )}
         </div>
       </div>
     </div>

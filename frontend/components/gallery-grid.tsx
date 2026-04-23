@@ -96,10 +96,7 @@ export function GalleryGrid() {
                 key={image.src}
                 type="button"
                 onClick={() => openImage(index)}
-                initial={{ opacity: 0, y: 22 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.35 }}
-                transition={{ duration: 0.55, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                initial={false}
                 className={cn(
                   'group relative h-[26rem] w-[84vw] max-w-[24rem] shrink-0 snap-center overflow-hidden rounded-[2rem] border border-white/12 bg-[#0b100c] text-left shadow-[0_30px_80px_rgba(0,0,0,0.35)] transition duration-500',
                   isActive ? 'opacity-100' : 'opacity-70'
@@ -188,8 +185,12 @@ export function GalleryGrid() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[80] flex items-center justify-center bg-black/88 px-3 py-4 backdrop-blur-md sm:px-5 sm:py-5"
+                  onClick={closeImage}
                 >
-                  <div className="relative flex w-full max-w-7xl flex-col items-center gap-3 px-3 sm:gap-4 sm:px-6">
+                  <div
+                    className="relative flex w-full max-w-7xl flex-col items-center gap-3 px-3 sm:gap-4 sm:px-6"
+                    onClick={(event) => event.stopPropagation()}
+                  >
                     <button
                       type="button"
                       aria-label="Fechar galeria"

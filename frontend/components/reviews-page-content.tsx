@@ -11,7 +11,7 @@ export function ReviewsPageContent() {
 
   return (
     <div className="space-y-12 pb-8">
-      <AnimatedSection className="grid gap-8 xl:grid-cols-[0.88fr_1.12fr]">
+      <AnimatedSection className="grid gap-0 sm:gap-8 xl:grid-cols-[0.88fr_1.12fr]">
         <div className="py-2 sm:py-4 xl:sticky xl:top-28 xl:self-start">
           <span className="text-xs uppercase tracking-[0.3em] text-champagne">Submeter review</span>
           <h2 className="mt-4 font-heading text-4xl text-ink">Partilha a tua experiência.</h2>
@@ -20,7 +20,7 @@ export function ReviewsPageContent() {
           </div>
         </div>
         <div>
-          <div className="xl:hidden">
+          <div className="xl:hidden pb-6">
             <ReviewScoreCard />
           </div>
           <ReviewForm onSubmitted={() => setRefreshKey((current) => current + 1)} />
