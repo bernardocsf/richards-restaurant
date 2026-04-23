@@ -6,7 +6,14 @@ import {
   ReviewPayload
 } from '@/lib/schemas';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000/api';
+function normalizeApiBaseUrl(value?: string) {
+  const fallback = 'http://localhost:4000/api';
+  const base = (value ?? fallback).trim().replace(/\/+$/, '');
+
+  return base.endsWith('/api') ? base : `${base}/api`;
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
 
 export type ReservationZone = 'interior' | 'terrace';
 export type ReservationRequestZone = ReservationZone | 'either';
